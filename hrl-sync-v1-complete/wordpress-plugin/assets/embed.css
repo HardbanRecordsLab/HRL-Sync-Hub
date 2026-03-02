@@ -1,0 +1,16 @@
+/* HRL Sync Embed — WordPress Plugin Styles */
+.hrl-sync-embed {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    margin: 1.5rem 0;
+    background: #0A080E;
+}
+.hrl-sync-embed iframe {
+    display: block;
+    width: 100%;
+    border: none;
+}
+@media (max-width: 480px) {
+    .hrl-sync-embed { border-radius: 6px; }
+}
