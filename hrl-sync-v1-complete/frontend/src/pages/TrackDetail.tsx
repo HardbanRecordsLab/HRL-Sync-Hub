@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit2, Save, X, ExternalLink, Play, Pause,
-  Music2, Loader2, Plus, Trash2, Check
+  Music2, Loader2, Plus, Trash2, Check, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,24 +17,24 @@ import { cn } from "@/lib/utils";
 
 const CLEARANCE_OPTIONS = [
   { v: "cleared_ready", l: "Cleared & Ready" },
-  { v: "in_progress",   l: "In Progress" },
-  { v: "not_cleared",   l: "Not Cleared" },
+  { v: "in_progress", l: "In Progress" },
+  { v: "not_cleared", l: "Not Cleared" },
 ];
 
-const GENRE_OPTIONS = ["Electronic","Hip-Hop","Pop","Rock","Ambient","Classical","Jazz","R&B","Folk","Country","Metal","World"];
-const MOOD_OPTIONS  = ["Uplifting","Dark","Tense","Romantic","Epic","Calm","Energetic","Melancholic","Playful","Mysterious"];
+const GENRE_OPTIONS = ["Electronic", "Hip-Hop", "Pop", "Rock", "Ambient", "Classical", "Jazz", "R&B", "Folk", "Country", "Metal", "World"];
+const MOOD_OPTIONS = ["Uplifting", "Dark", "Tense", "Romantic", "Epic", "Calm", "Energetic", "Melancholic", "Playful", "Mysterious"];
 
 export default function TrackDetail() {
   const { trackId } = useParams<{ trackId: string }>();
-  const navigate     = useNavigate();
-  const qc           = useQueryClient();
-  const player       = useAudioPlayer();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const player = useAudioPlayer();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
 
   const { data: track, isLoading } = useQuery({
     queryKey: ["track", trackId],
-    queryFn:  () => api.get<any>(`/api/tracks/${trackId}`),
+    queryFn: () => api.get<any>(`/api/tracks/${trackId}`),
     onSuccess: (t: any) => {
       if (!editing) setForm({
         title: t.title, artist: t.artist, composer: t.composer ?? "",
@@ -64,6 +64,16 @@ export default function TrackDetail() {
   const moodsMut = useMutation({
     mutationFn: (moods: string[]) => api.post(`/api/tracks/${trackId}/moods`, { moods }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["track", trackId] }),
+  });
+
+  const aiMut = useMutation({
+    mutationFn: () => api.post<any>(`/api/ai/analyze-track/${trackId}`, {}),
+    onSuccess: (data: any) => {
+      if (data.genres) genresMut.mutate(data.genres);
+      if (data.moods) moodsMut.mutate(data.moods);
+      toast.success("AI Analysis complete: Genres and moods updated.");
+    },
+    onError: (e: any) => toast.error("AI Service Error: " + e.message),
   });
 
   if (isLoading) return (
@@ -150,6 +160,15 @@ export default function TrackDetail() {
                 <Edit2 className="w-3 h-3 mr-1.5" />Edit
               </Button>
             )}
+            <Button
+              variant="outline" size="sm"
+              className="h-8 text-xs hrl-label border-red-500/30 text-red-400 hover:bg-red-500/10"
+              onClick={() => aiMut.mutate()}
+              disabled={aiMut.isPending}
+            >
+              {aiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Sparkles className="w-3 h-3 mr-1.5" />}
+              AI Insight
+            </Button>
           </div>
         </div>
 
@@ -192,7 +211,7 @@ export default function TrackDetail() {
                 <div>
                   <p className="hrl-label text-muted-foreground mb-1">Duration</p>
                   <p className="text-sm font-medium mono">
-                    {track.duration ? `${Math.floor(track.duration/60)}:${String(track.duration%60).padStart(2,"0")}` : "—"}
+                    {track.duration ? `${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, "0")}` : "—"}
                   </p>
                 </div>
               </div>

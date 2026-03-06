@@ -7,21 +7,22 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 
-import Auth         from "./pages/Auth";
-import Dashboard    from "./pages/Dashboard";
-import Library      from "./pages/Library";
-import TrackDetail  from "./pages/TrackDetail";
-import Pitches      from "./pages/Pitches";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Library from "./pages/Library";
+import TrackDetail from "./pages/TrackDetail";
+import Pitches from "./pages/Pitches";
 import PlaylistDetail from "./pages/PlaylistDetail";
 import SharedPlaylist from "./pages/SharedPlaylist";
-import Contacts     from "./pages/Contacts";
+import Contacts from "./pages/Contacts";
 import ContactDetail from "./pages/ContactDetail";
-import Projects     from "./pages/Projects";
-import Analytics    from "./pages/Analytics";
-import Settings     from "./pages/Settings";
+import Projects from "./pages/Projects";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 import LyricsCatalog from "./pages/LyricsCatalog";
-import GoogleDrive  from "./pages/GoogleDrive";
-import NotFound     from "./pages/NotFound";
+import GoogleDrive from "./pages/GoogleDrive";
+import BusinessHub from "./pages/BusinessHub";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -67,19 +68,20 @@ export default function App() {
               </>
             ) : (
               <>
-                <Route path="/"                  element={<Dashboard />} />
-                <Route path="/library"           element={<Library />} />
-                <Route path="/library/:trackId"  element={<TrackDetail />} />
-                <Route path="/lyrics"            element={<LyricsCatalog />} />
-                <Route path="/drive"             element={<GoogleDrive />} />
-                <Route path="/pitches"           element={<Pitches />} />
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/library/:trackId" element={<TrackDetail />} />
+                <Route path="/lyrics" element={<LyricsCatalog />} />
+                <Route path="/drive" element={<GoogleDrive />} />
+                <Route path="/pitches" element={<Pitches />} />
                 <Route path="/pitches/:playlistId" element={<PlaylistDetail />} />
-                <Route path="/contacts"          element={<Contacts />} />
+                <Route path="/contacts" element={<Contacts />} />
                 <Route path="/contacts/:contactId" element={<ContactDetail />} />
-                <Route path="/projects"          element={<Projects />} />
-                <Route path="/analytics"         element={<Analytics />} />
-                <Route path="/settings"          element={<Settings />} />
-                <Route path="*"                  element={<NotFound />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/business" element={<BusinessHub />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
               </>
             )}
           </Routes>

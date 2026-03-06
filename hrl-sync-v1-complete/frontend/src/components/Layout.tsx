@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Library, FileText, Radio, Users,
   Kanban, BarChart3, HardDrive, Settings, LogOut,
-  ChevronLeft, ChevronRight, Music2
+  ChevronLeft, ChevronRight, Music2, Briefcase
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,15 +16,16 @@ import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 interface LayoutProps { children: React.ReactNode; }
 
 const NAV = [
-  { to: "/",         icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/library",  icon: Library,         label: "Library"   },
-  { to: "/lyrics",   icon: FileText,        label: "Lyrics"    },
-  { to: "/drive",    icon: HardDrive,       label: "Drive"     },
-  { to: "/pitches",  icon: Radio,           label: "Pitches"   },
-  { to: "/contacts", icon: Users,           label: "Contacts"  },
-  { to: "/projects", icon: Kanban,          label: "Projects"  },
-  { to: "/analytics",icon: BarChart3,       label: "Analytics" },
-  { to: "/settings", icon: Settings,        label: "Settings"  },
+  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/library", icon: Library, label: "Library" },
+  { to: "/lyrics", icon: FileText, label: "Lyrics" },
+  { to: "/drive", icon: HardDrive, label: "Drive" },
+  { to: "/pitches", icon: Radio, label: "Pitches" },
+  { to: "/contacts", icon: Users, label: "Contacts" },
+  { to: "/projects", icon: Kanban, label: "Projects" },
+  { to: "/business", icon: Briefcase, label: "Business" },
+  { to: "/analytics", icon: BarChart3, label: "Analytics" },
+  { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function Layout({ children }: LayoutProps) {

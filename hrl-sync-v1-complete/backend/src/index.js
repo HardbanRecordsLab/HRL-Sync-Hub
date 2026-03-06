@@ -3,15 +3,15 @@ require("express-async-errors");
 
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
 const morgan = require("morgan");
 const compression = require("compression");
-const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 
 const { logger } = require("./utils/logger");
 const { testConnection } = require("./db/pool");
 const errorHandler = require("./middleware/errorHandler");
 const authMiddleware = require("./middleware/auth");
+const { getHelmetConfig, RateLimitManager } = require("./middleware/security");
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 const authRoutes = require("./routes/auth");
@@ -23,26 +23,15 @@ const analyticsRoutes = require("./routes/analytics");
 const embedRoutes = require("./routes/embed");
 const contactsRoutes = require("./routes/contacts");
 const projectsRoutes = require("./routes/projects");
+const businessRoutes = require("./routes/business");
+const aiService = require("./services/aiService");
 
 const app = express();
 
 app.set("trust proxy", 1);
 
 // ── Security ──────────────────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      frameSrc: ["*"],
-      mediaSrc: ["*"],
-      imgSrc: ["*", "data:"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-    },
-  },
-}));
+app.use(helmet(getHelmetConfig()));
 
 app.use(compression());
 app.use(morgan("combined", { stream: { write: m => logger.info(m.trim()) } }));
@@ -60,8 +49,9 @@ app.use(cors({
 }));
 
 // ── Rate limits ───────────────────────────────────────────────────────────────
-app.use("/api/", rateLimit({ windowMs: 15 * 60 * 1000, max: 600 }));
-app.use("/api/auth/", rateLimit({ windowMs: 15 * 60 * 1000, max: 30 }));
+app.use("/api/", RateLimitManager.getGlobalLimiter());
+app.use("/api/auth/login", RateLimitManager.getAuthLimiter());
+app.use("/api/auth/register", RateLimitManager.getAuthLimiter());
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "50mb" }));
@@ -84,7 +74,7 @@ app.get("/health", async (req, res) => {
   res.json({
     status: "ok",
     app: "HRL Sync API",
-    version: "1.0.0",
+    version: "2.0.0-premium",
     db: dbOk ? "connected" : "error",
     drive: !!process.env.GOOGLE_CLIENT_ID,
     ts: new Date().toISOString(),
@@ -93,17 +83,26 @@ app.get("/health", async (req, res) => {
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
+app.use("/api/business", businessRoutes);
 app.use("/api/tracks", (req, res, next) => {
   if (req.path.startsWith("/stream/") && req.query.shareToken) return next();
   return authMiddleware(req, res, next);
 }, tracksRoutes);
-app.use("/api/lyrics", lyricsRoutes);          // public + authed
+app.use("/api/lyrics", lyricsRoutes);
 app.use("/api/drive", authMiddleware, driveRoutes);
-app.use("/api/playlists", playlistsRoutes);        // public + authed
-app.use("/api/analytics", analyticsRoutes);        // public tracking
-app.use("/api/embed", embedRoutes);            // public embed
+app.use("/api/playlists", playlistsRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/embed", embedRoutes);
 app.use("/api/contacts", authMiddleware, contactsRoutes);
 app.use("/api/projects", authMiddleware, projectsRoutes);
+
+// AI Insight Route
+app.post("/api/ai/analyze-track/:id", authMiddleware, async (req, res) => {
+  const track = await require("./db/pool").queryOne("SELECT * FROM tracks WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
+  if (!track) return res.status(404).json({ error: "Track not found" });
+  const analysis = await aiService.detectMoodAndGenre(track);
+  res.json(analysis);
+});
 
 app.use("*", (req, res) => res.status(404).json({ error: "Not found" }));
 app.use(errorHandler);
@@ -111,9 +110,10 @@ app.use(errorHandler);
 // ── Boot ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 (async () => {
-  await testConnection();
+  // skip testConnection if migrations are manual
+  // await testConnection(); 
   app.listen(PORT, "0.0.0.0", () => {
-    logger.info(`🎵 HRL Sync API — port ${PORT} | env: ${process.env.NODE_ENV}`);
+    logger.info(`🎵 HRL Sync Hub PREMIUM API — port ${PORT} | env: ${process.env.NODE_ENV}`);
   });
 })();
 
