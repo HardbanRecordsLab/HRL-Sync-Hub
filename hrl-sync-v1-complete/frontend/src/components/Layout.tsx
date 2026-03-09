@@ -53,9 +53,7 @@ export default function Layout({ children }: LayoutProps) {
           "flex items-center gap-3 px-4 py-5 border-b border-border",
           collapsed && "justify-center px-2"
         )}>
-          <div className="w-8 h-8 shrink-0 rounded border border-red-500/60 flex items-center justify-center bg-red-500/10">
-            <Music2 className="w-4 h-4 text-red-500" />
-          </div>
+          <img src="/logo.png" alt="HRL Logo" className="w-8 h-8 shrink-0 object-contain" />
           {!collapsed && (
             <div>
               <p className="hrl-title text-lg leading-none text-foreground tracking-wider">HRL SYNC</p>
