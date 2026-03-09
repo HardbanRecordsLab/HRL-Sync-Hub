@@ -15,7 +15,7 @@ import Pitches from "./pages/Pitches";
 import PlaylistDetail from "./pages/PlaylistDetail";
 import SharedPlaylist from "./pages/SharedPlaylist";
 import Contacts from "./pages/Contacts";
-import ContactDetail from "./pages/ContactDetail";
+// import ContactDetail from "./pages/ContactDetail";
 import Projects from "./pages/Projects";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
@@ -76,7 +76,7 @@ export default function App() {
                 <Route path="/pitches" element={<Pitches />} />
                 <Route path="/pitches/:playlistId" element={<PlaylistDetail />} />
                 <Route path="/contacts" element={<Contacts />} />
-                <Route path="/contacts/:contactId" element={<ContactDetail />} />
+                {/* <Route path="/contacts/:contactId" element={<ContactDetail />} /> */}
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/business" element={<BusinessHub />} />
                 <Route path="/analytics" element={<Analytics />} />
