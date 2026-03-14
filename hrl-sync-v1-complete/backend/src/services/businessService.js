@@ -11,15 +11,15 @@ class BusinessService {
     /**
      * WHITE LABEL CHANNELS
      */
-    async createChannel(clientId, channelData) {
+    async createChannel(userId, channelData) {
         const id = uuidv4();
         const sql = `
       INSERT INTO white_label_channels 
-      (id, client_id, name, description, channel_type, branding, settings, created_at)
+      (id, user_id, name, description, channel_type, branding, settings, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       RETURNING *`;
         return queryOne(sql, [
-            id, clientId, channelData.name, channelData.description,
+            id, userId, channelData.name, channelData.description,
             channelData.type, JSON.stringify(channelData.branding || {}),
             JSON.stringify(channelData.settings || {})
         ]);
@@ -81,10 +81,10 @@ class BusinessService {
         return queryOne(sql, [id, data.name, data.type, data.industry, data.email, data.tier || 'free']);
     }
 
-    async getClientDashboard(clientId) {
-        const client = await queryOne(`SELECT * FROM b2b_clients WHERE id = $1`, [clientId]);
-        const channelsCount = await queryOne(`SELECT COUNT(*) as count FROM white_label_channels WHERE client_id = $1`, [clientId]);
-        return { client, channelsCount: channelsCount.count };
+    async getClientDashboard(userId) {
+        const user = await queryOne(`SELECT id, email, full_name FROM users WHERE id = $1`, [userId]);
+        const channelsCount = await queryOne(`SELECT COUNT(*) as count FROM white_label_channels WHERE user_id = $1`, [userId]);
+        return { user, channelsCount: channelsCount?.count || 0 };
     }
 }
 

@@ -58,7 +58,7 @@ export default function Layout({ children }: LayoutProps) {
             <div>
               <p className="hrl-title text-lg leading-none text-foreground tracking-wider">HRL SYNC</p>
               <p className="hrl-label text-[10px] mt-0.5" style={{ color: 'var(--hrl-red)', letterSpacing: '0.15em' }}>
-                HARDBAN RECORDS
+                HARDBAN RECORDS LAB
               </p>
             </div>
           )}

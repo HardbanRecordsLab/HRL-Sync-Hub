@@ -7,9 +7,9 @@ import { toast } from "sonner";
 import { Loader2, Music2 } from "lucide-react";
 
 export default function Auth() {
-  const [mode, setMode]     = useState<"login" | "register">("login");
-  const [email, setEmail]   = useState("");
-  const [pass, setPass]     = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
@@ -65,7 +65,7 @@ export default function Auth() {
               <Label className="hrl-label mb-1.5 block">Email</Label>
               <Input
                 type="email"
-                placeholder="you@hardbanrecords.com"
+                placeholder="you@hardbanrecordslab.online"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && submit()}

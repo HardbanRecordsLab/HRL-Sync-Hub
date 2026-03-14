@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: HRL Sync — Hardban Records Lab
- * Plugin URI:  https://hardbanrecords.com/hrlsync
+ * Plugin URI:  https://hardbanrecordslab.online/hrlsync
  * Description: Embed HRL Sync music playlists and White Label Channels on WordPress. Modernized for v2.0 Premium Pro.
- * Version:     2.0.0
+ * Version:     2.0.1
  * Author:      Hardban Records Lab
  * License:     GPL v2
  * Text Domain: hrl-sync
@@ -14,6 +14,13 @@ if (!defined('ABSPATH')) exit;
 define('HRL_SYNC_VER', '2.0.0');
 define('HRL_SYNC_DIR', plugin_dir_path(__FILE__));
 define('HRL_SYNC_URL', plugin_dir_url(__FILE__));
+
+if (file_exists(HRL_SYNC_DIR . 'includes/admin-hub.php')) {
+    require_once HRL_SYNC_DIR . 'includes/admin-hub.php';
+    if (class_exists('HRL_Sync_Admin')) {
+        HRL_Sync_Admin::init();
+    }
+}
 
 // ── Core class ────────────────────────────────────────────────────────────────
 class HRL_Sync_Plugin {
@@ -35,12 +42,26 @@ class HRL_Sync_Plugin {
     add_shortcode('hrl_sync',         [$this, 'sc_playlist']);
     add_shortcode('hrl_playlist',     [$this, 'sc_playlist']);
     add_shortcode('hrl_channel',      [$this, 'sc_channel']);
+    add_shortcode('hrl_public_library', [$this, 'sc_public_library']);
   }
 
   /**
    * [hrl_channel id="CHANNEL_UUID"]
    */
-  public function sc_channel($atts) {
+  public function sc_public_library($atts) {
+    $frontend_url = get_option('hrl_sync_frontend_url', 'https://app.hrl-sync-hub.hardbanrecordslab.online');
+    $public_url = trailingslashit($frontend_url) . 'public-library';
+    
+    return sprintf(
+        '<div class="hrl-sync-embed hrl-public-library">
+            <iframe src="%s" style="width:100%%; min-height:600px; border:none;" allow="autoplay; encrypted-media"></iframe>
+        </div>',
+        esc_url($public_url)
+    );
+  }
+
+  /**
+   * [hrl_channel id="CHANNEL_UUID"]
     $atts = shortcode_atts([
       'id'       => '',
       'theme'    => get_option('hrl_sync_default_theme', 'dark'),
@@ -141,7 +162,7 @@ class HRL_Sync_Plugin {
             <th>API URL (VPS)</th>
             <td>
               <input type="url" name="hrl_sync_api_url" class="regular-text"
-                value="<?php echo esc_attr(get_option('hrl_sync_api_url','https://api.hardbanrecords.com')); ?>">
+                value="<?php echo esc_attr(get_option('hrl_sync_api_url','https://hrl-sync-hub.hardbanrecordslab.online')); ?>">
               <p class="description">Your HRL Sync VPS backend URL (v2.0 logic enabled)</p>
             </td>
           </tr>
@@ -149,7 +170,7 @@ class HRL_Sync_Plugin {
             <th>Frontend URL</th>
             <td>
               <input type="url" name="hrl_sync_frontend_url" class="regular-text"
-                value="<?php echo esc_attr(get_option('hrl_sync_frontend_url','https://hrlsync.vercel.app')); ?>">
+                value="<?php echo esc_attr(get_option('hrl_sync_frontend_url','https://app.hrl-sync-hub.hardbanrecordslab.online')); ?>">
             </td>
           </tr>
           <tr>
@@ -226,7 +247,7 @@ class HRL_Sync_Plugin {
 new HRL_Sync_Plugin();
 
 register_activation_hook(__FILE__, function() {
-  add_option('hrl_sync_api_url',      'https://api.hardbanrecords.com');
-  add_option('hrl_sync_frontend_url', 'https://hrlsync.vercel.app');
+  add_option('hrl_sync_api_url',      'https://hrl-sync-hub.hardbanrecordslab.online');
+  add_option('hrl_sync_frontend_url', 'https://app.hrl-sync-hub.hardbanrecordslab.online');
   add_option('hrl_sync_default_theme','dark');
 });

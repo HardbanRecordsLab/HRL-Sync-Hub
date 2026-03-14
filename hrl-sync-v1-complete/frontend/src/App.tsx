@@ -22,6 +22,7 @@ import Settings from "./pages/Settings";
 import LyricsCatalog from "./pages/LyricsCatalog";
 import GoogleDrive from "./pages/GoogleDrive";
 import BusinessHub from "./pages/BusinessHub";
+import PublicLibrary from "./pages/PublicLibrary";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -61,6 +62,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/share/:token" element={<SharedPlaylist />} />
+            <Route path="/public-library" element={<PublicLibrary />} />
             {!session ? (
               <>
                 <Route path="/auth" element={<Auth />} />

@@ -22,6 +22,38 @@ router.post("/event", async (req, res) => {
 // All routes below require auth
 router.use(auth);
 
+// ── GET /api/analytics/dashboard ──────────────────────────────────────────────
+router.get("/dashboard", async (req, res) => {
+  const [counts, recentTracks] = await Promise.all([
+    queryOne(
+      `SELECT 
+        (SELECT COUNT(*) FROM tracks WHERE user_id = $1)::int as total_tracks,
+        (SELECT COUNT(*) FROM tracks WHERE user_id = $1 AND clearance_status = 'cleared_ready')::int as sync_ready,
+        (SELECT COUNT(*) FROM playlists WHERE user_id = $1)::int as total_playlists,
+        (SELECT COUNT(*) FROM lyrics WHERE track_id IN (SELECT id FROM tracks WHERE user_id = $1))::int as total_lyrics,
+        (SELECT COUNT(*) FROM tracking_events te 
+         JOIN shareable_links sl ON sl.id = te.shareable_link_id 
+         JOIN playlists p ON p.id = sl.playlist_id 
+         WHERE p.user_id = $1 AND te.event_type = 'track_played')::int as total_plays`,
+      [req.userId]
+    ),
+    queryAll(
+      `SELECT id, title, artist, created_at FROM tracks 
+       WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5`,
+      [req.userId]
+    )
+  ]);
+
+  res.json({
+    totalTracks: counts.total_tracks,
+    syncReady: counts.sync_ready,
+    totalPlaylists: counts.total_playlists,
+    totalPlays: counts.total_plays,
+    totalLyrics: counts.total_lyrics,
+    recentTracks
+  });
+});
+
 // ── GET /api/analytics/overview ────────────────────────────────────────────────
 // Total counts, top playlists, top tracks
 router.get("/overview", async (req, res) => {

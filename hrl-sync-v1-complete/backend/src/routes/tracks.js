@@ -45,6 +45,12 @@ router.get("/stream/:id", async (req, res) => {
     if (link) hasAccess = true;
   }
 
+  if (!hasAccess) {
+    // Check if the track itself is marked as public
+    const trackInfo = await queryOne("SELECT is_public FROM tracks WHERE id=$1", [trackId]);
+    if (trackInfo?.is_public) hasAccess = true;
+  }
+
   if (!hasAccess) return res.status(401).json({ error: "Unauthorized access to this audio track" });
 
   const track = await queryOne("SELECT * FROM tracks WHERE id=$1", [trackId]);
@@ -160,6 +166,17 @@ router.get("/", async (req, res) => {
   );
 
   res.json({ tracks: rows, total: parseInt(count), page: parseInt(page), limit: parseInt(limit) });
+});
+
+// ── GET /api/tracks/public (Public Library) ───────────────────────────────────
+router.get("/public", async (req, res) => {
+  const rows = await queryAll(
+    `SELECT t.id, t.title, t.artist, t.duration, t.bpm, t.key, t.clearance_status
+     FROM tracks t
+     WHERE t.is_public = true
+     ORDER BY t.created_at DESC`
+  );
+  res.json({ tracks: rows });
 });
 
 // ── GET /api/tracks/search (full-text trigram) ─────────────────────────────────

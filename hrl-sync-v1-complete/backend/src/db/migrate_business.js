@@ -39,7 +39,7 @@ const runMigration = async () => {
         -- White Label Channels
         CREATE TABLE IF NOT EXISTS white_label_channels (
             id UUID PRIMARY KEY,
-            client_id UUID NOT NULL,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             description TEXT,
             channel_type TEXT,

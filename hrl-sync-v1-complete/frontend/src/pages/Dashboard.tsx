@@ -1,29 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { Music2, Radio, Eye, TrendingUp, Clock, HardDrive } from "lucide-react";
 import Layout from "@/components/Layout";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
-      const [tracks, playlists, plays, lyrics] = await Promise.all([
-        supabase.from("tracks").select("id, clearance_status, created_at", { count: "exact" }),
-        supabase.from("playlists").select("id, name, created_at", { count: "exact" }),
-        supabase.from("tracking_events").select("id", { count: "exact" }).eq("event_type", "track_played"),
-        supabase.from("lyrics").select("id", { count: "exact" }),
-      ]);
-      const recentTracks = await supabase
-        .from("tracks").select("id, title, artist, created_at")
-        .order("created_at", { ascending: false }).limit(5);
+      // Fetch from VPS Backend instead of direct Supabase
+      const data = await api.get<any>("/analytics/dashboard");
       return {
-        totalTracks: tracks.count ?? 0,
-        syncReady: tracks.data?.filter(t => t.clearance_status === "cleared_ready").length ?? 0,
-        totalPlaylists: playlists.count ?? 0,
-        totalPlays: plays.count ?? 0,
-        totalLyrics: lyrics.count ?? 0,
-        recentTracks: recentTracks.data ?? [],
+        totalTracks: data.totalTracks ?? 0,
+        syncReady: data.syncReady ?? 0,
+        totalPlaylists: data.totalPlaylists ?? 0,
+        totalPlays: data.totalPlays ?? 0,
+        totalLyrics: data.totalLyrics ?? 0,
+        recentTracks: data.recentTracks ?? [],
       };
     },
   });
