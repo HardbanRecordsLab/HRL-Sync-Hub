@@ -110,11 +110,22 @@ app.use(errorHandler);
 // ── Boot ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 (async () => {
-  // skip testConnection if migrations are manual
-  // await testConnection(); 
-  app.listen(PORT, "0.0.0.0", () => {
-    logger.info(`🎵 HRL Sync Hub PREMIUM API — port ${PORT} | env: ${process.env.NODE_ENV}`);
-  });
+  try {
+    await testConnection(); 
+    
+    // Auto-run migrations
+    const migrateCore = require("./db/migrate_core");
+    const migrateBusiness = require("./db/migrate_business");
+    await migrateCore();
+    await migrateBusiness();
+    
+    app.listen(PORT, "0.0.0.0", () => {
+      logger.info(`🎵 HRL Sync Hub PREMIUM API — port ${PORT} | env: ${process.env.NODE_ENV}`);
+    });
+  } catch (err) {
+    logger.error("Failed to start HRL Sync API:", err.message);
+    process.exit(1);
+  }
 })();
 
 module.exports = app;

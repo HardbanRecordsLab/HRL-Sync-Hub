@@ -100,8 +100,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
   const fullPath = req.file.path;
   let metadata = {};
+  let duration = 0;
   try {
-    metadata = (await parseFile(fullPath)).common;
+    const meta = await parseFile(fullPath);
+    metadata = meta.common;
+    duration = Math.round(meta.format.duration || 0);
   } catch (e) {
     console.error("Metatada parse error:", e);
   }
@@ -111,16 +114,20 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   const bpm = req.body.bpm || metadata.bpm || null;
   const key = req.body.key || metadata.key || null;
 
-  const { rows: [track] } = await query(
-    `INSERT INTO tracks (user_id, title, artist, file_name, file_size, mime_type,
-       local_file_path, source, bpm, key, clearance_status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'local', $8, $9, 'not_cleared')
-     RETURNING *`,
-    [req.userId, title, artist, req.file.originalname, req.file.size, req.file.mimetype,
-    req.file.filename, bpm, key]
-  );
-
-  res.status(201).json(track);
+  try {
+    const { rows: [track] } = await query(
+      `INSERT INTO tracks (user_id, title, artist, file_name, file_size, mime_type,
+         local_file_path, source, bpm, key, duration, clearance_status, is_public)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'local', $8, $9, $10, 'not_cleared', false)
+       RETURNING *`,
+      [req.userId, title, artist, req.file.originalname, req.file.size, req.file.mimetype,
+      req.file.filename, bpm, key, duration]
+    );
+    res.status(201).json(track);
+  } catch (err) {
+    console.error("DB Insert Error:", err);
+    res.status(500).json({ error: "Błąd zapisu w bazie danych: " + err.message });
+  }
 });
 
 // ── GET /api/tracks ────────────────────────────────────────────────────────────

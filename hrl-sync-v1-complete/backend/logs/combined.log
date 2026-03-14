@@ -1,2 +1,3 @@
 {"level":"info","message":"Running Business Migration...","timestamp":"2026-03-06T18:24:47.688Z"}
 {"level":"error","message":"❌ Business Migration failed: ","timestamp":"2026-03-06T18:24:47.713Z"}
+{"level":"error","message":"Check failed: ","timestamp":"2026-03-14T18:27:39.910Z"}
