@@ -8,7 +8,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY src ./src
-COPY public ./public
 
 # Non-root
 RUN addgroup -S app && adduser -S app -G app \
