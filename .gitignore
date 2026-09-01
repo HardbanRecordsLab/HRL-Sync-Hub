@@ -11,3 +11,10 @@ build
 uploads/
 backend/uploads/
 *.sqlite
+
+# Local ops notes / credentials — never commit
+CMLP_WordPress_Bible_2026.md
+/*.pem
+/*.key
+/secrets*
+
