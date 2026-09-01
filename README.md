@@ -46,11 +46,16 @@ cd backend && npm run test:e2e      # 23 checki E2E na in-memory Postgres (pg-me
 cd frontend && npm run build         # typecheck + build
 ```
 
-## Wdrożenie produkcyjne
+## Wdrożenie produkcyjne — LIVE
 
-**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — Docker Compose (API + Postgres + MinIO),
-Vercel (frontend), Nginx/TLS, GitHub Actions, Google OAuth, WordPress plugin.
-Backend: `hrl-sync.hardbanrecordslab.online` · Frontend: `hrl-sync-hub.hardbanrecordslab.online`.
+| | |
+|---|---|
+| Backend API | `https://hrl-sync.hardbanrecordslab.online` (VPS · Docker · Let's Encrypt) |
+| Frontend | `https://hrl-sync.hub.hardbanrecordslab.online` (Vercel) |
+| Magazyn audio | MinIO (kontener, wewn.) · bucket `hrl-audio` |
+
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — Docker Compose, Vercel, Nginx/TLS,
+GitHub Actions, Google OAuth, WordPress plugin.
 
 ## Roadmap
 

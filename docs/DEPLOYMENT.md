@@ -1,16 +1,16 @@
 # HRL Sync — Wdrożenie
 
-```
-Vercel (frontend)                          VPS / Docker
-React + Vite                    ┌─────────────────────────────────────┐
-hrl-sync-hub.hardbanrecordslab  │  API (Node 20 + Express) :9110       │
-        │  ──────HTTPS──────────▶│    hrl-sync.hardbanrecordslab.online │
-        │                        │  PostgreSQL 16   (kontener, wewn.)   │
-        │                        │  MinIO           (kontener, wewn.)   │  ← magazyn audio
-        │                        └─────────────────────────────────────┘
-        │                                     ▲
-        │                        WordPress plugin  [hrlsync token="…"]   (opcjonalnie)
-        │                        Google Drive / Docs                     (opcjonalny import)
+```text
+Vercel (frontend)                              VPS / Docker
+React + Vite                        ┌─────────────────────────────────────┐
+hrl-sync.hub.hardbanrecordslab…     │  API (Node 20 + Express) :9110       │
+        │   ───/api/* (rewrite)────▶ │    hrl-sync.hardbanrecordslab.online │
+        │                            │  PostgreSQL 16   (kontener, wewn.)   │
+        │                            │  MinIO           (kontener, wewn.)   │  ← magazyn audio
+        │                            └─────────────────────────────────────┘
+        │                                         ▲
+        │                            WordPress plugin  [hrlsync token="…"]   (opcjonalnie)
+        │                            Google Drive / Docs                     (opcjonalny import)
 ```
 
 **Magazyn audio:** MinIO (S3-compatible) w kontenerze na VPS. API jest jedyną bramką —
@@ -27,11 +27,12 @@ Google Drive jest opcjonalnym źródłem importu.
 1. Nowy projekt → **APIs & Services → Enable**: `Google Drive API`, `Google Docs API`
 2. **Credentials → OAuth 2.0 Client ID → Web application**
    Authorized redirect URIs:
-   ```
-   https://sync-api.hardbanrecordslab.online/api/auth/google/callback
+   ```text
+   https://hrl-sync.hardbanrecordslab.online/api/auth/google/callback
    http://localhost:3001/api/auth/google/callback
    ```
-3. Zapisz `Client ID` + `Client Secret` → do `backend/.env`
+3. Zapisz `Client ID` + `Client Secret` → do `.env` na VPS (`/srv/hrl-sync/.env`) →
+   `docker compose restart api`
 4. (Opcjonalnie) Service Account → JSON w jednej linii → `GOOGLE_SERVICE_ACCOUNT_JSON`
    (potrzebne tylko do publicznego odtwarzania w embed playerze)
 
@@ -66,8 +67,8 @@ S3_ACCESS_KEY=hrl-minio
 S3_SECRET_KEY=         # min. 8 znaków — root MinIO
 API_PORT=9110
 API_URL=https://hrl-sync.hardbanrecordslab.online
-FRONTEND_URL=https://hrl-sync-hub.hardbanrecordslab.online
-ALLOWED_ORIGINS=https://hrl-sync-hub.hardbanrecordslab.online
+FRONTEND_URL=https://hrl-sync.hub.hardbanrecordslab.online
+ALLOWED_ORIGINS=https://hrl-sync.hub.hardbanrecordslab.online
 GOOGLE_CLIENT_ID=...          # opcjonalne (import z Drive + teksty z Docs)
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_REDIRECT_URI=https://hrl-sync.hardbanrecordslab.online/api/auth/google/callback
@@ -91,12 +92,12 @@ certbot --nginx -d hrl-sync.hardbanrecordslab.online
 
 ## 3. Frontend — Vercel
 
-1. Nowy projekt → **Root Directory: `frontend`**
-2. Framework: Vite (autodetekcja). Build: `npm run build`, Output: `dist`
-3. W `frontend/vercel.json` podmień `REPLACE-WITH-YOUR-API-HOST` na host API
-   (np. `sync-api.hardbanrecordslab.online`). Wtedy front woła API przez `/api/*`
-   z tej samej domeny i `VITE_API_URL` może zostać puste.
-   Alternatywnie ustaw `VITE_API_URL` w zmiennych środowiskowych Vercela.
+1. Nowy projekt → import repo → **Root Directory: `frontend`** (Vite, autodetekcja)
+2. `frontend/vercel.json` już kieruje `/api/*` → `hrl-sync.hardbanrecordslab.online`
+   i robi SPA-fallback. `VITE_API_URL` zostaw puste (front woła API same-origin przez rewrite).
+3. Settings → Domains → dodaj `hrl-sync.hub.hardbanrecordslab.online` → dodaj wskazany
+   rekord CNAME w Cloudflare (**szara chmurka** — Vercel obsługuje własny SSL).
+4. Backend musi mieć `FRONTEND_URL` i `ALLOWED_ORIGINS` = `https://hrl-sync.hub.hardbanrecordslab.online`.
 
 ---
 
