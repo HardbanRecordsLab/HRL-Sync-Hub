@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muzyczna Kreacja Słów – Twój Muzyczny Azyl</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C8A96E;
+    --gold-light: #E8D5A3;
+    --gold-dark: #8B6914;
+    --ink: #1A1410;
+    --ink-soft: #3D2F1F;
+    --cream: #FAF7F2;
+    --cream-dark: #F0E8D8;
+    --wine: #6B2737;
+    --forest: #1F3D2F;
+    --slate: #4A5568;
+    --smoke: #9A9080;
+    --white: #FFFFFF;
+    --border: rgba(200,169,110,0.25);
+    --shadow: 0 4px 32px rgba(26,20,16,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(26,20,16,0.96);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(200,169,110,0.2);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-family: 'Playfair Display', serif;
+    color: var(--gold);
+    font-size: 1.1rem;
+    letter-spacing: 0.03em;
+  }
+  .nav-brand span { color: var(--cream); font-size: 0.75rem; display: block; letter-spacing: 0.1em; font-family: 'DM Sans', sans-serif; font-weight: 300; }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a { color: rgba(250,247,242,0.7); text-decoration: none; font-size: 0.85rem; letter-spacing: 0.05em; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--gold); }
+  .nav-cta {
+    background: var(--gold); color: var(--ink); padding: 0.5rem 1.25rem;
+    border-radius: 2px; font-size: 0.85rem; font-weight: 600; text-decoration: none;
+    letter-spacing: 0.05em; transition: background 0.2s;
+  }
+  .nav-cta:hover { background: var(--gold-light); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #1A1410 0%, #2D1F10 50%, #1F3D2F 100%);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 8rem 2rem 4rem;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 60%, rgba(200,169,110,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(107,39,55,0.12) 0%, transparent 60%);
+  }
+  .hero-ornament {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 1px; height: 80px; background: linear-gradient(to bottom, transparent, var(--gold));
+    opacity: 0.4;
+  }
+  .hero-content { position: relative; max-width: 760px; }
+  .hero-eyebrow {
+    color: var(--gold); font-size: 0.75rem; letter-spacing: 0.25em;
+    text-transform: uppercase; margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    color: var(--cream);
+    line-height: 1.15;
+    margin-bottom: 0.5rem;
+  }
+  .hero h1 em { color: var(--gold); font-style: italic; }
+  .hero-sub {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    color: rgba(250,247,242,0.6);
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+  .hero-desc {
+    color: rgba(250,247,242,0.75);
+    font-size: 1rem;
+    max-width: 560px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.8;
+  }
+  .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--gold); color: var(--ink); padding: 0.85rem 2rem;
+    font-weight: 600; font-size: 0.9rem; letter-spacing: 0.08em;
+    text-decoration: none; border-radius: 2px; transition: all 0.2s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: #D4B478; transform: translateY(-1px); }
+  .btn-secondary {
+    border: 1px solid rgba(200,169,110,0.4); color: var(--gold);
+    padding: 0.85rem 2rem; font-size: 0.9rem; letter-spacing: 0.08em;
+    text-decoration: none; border-radius: 2px; transition: all 0.2s;
+    display: inline-block;
+  }
+  .btn-secondary:hover { border-color: var(--gold); background: rgba(200,169,110,0.05); }
+  .hero-badges {
+    display: flex; gap: 2rem; justify-content: center; margin-top: 4rem;
+    border-top: 1px solid rgba(200,169,110,0.15); padding-top: 2rem;
+  }
+  .hero-badge { text-align: center; }
+  .hero-badge-num { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--gold); }
+  .hero-badge-label { font-size: 0.75rem; color: rgba(250,247,242,0.5); letter-spacing: 0.1em; }
+
+  /* SECTION COMMON */
+  section { padding: 5rem 2rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-eyebrow {
+    text-align: center; color: var(--gold); font-size: 0.75rem;
+    letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    text-align: center; margin-bottom: 1rem; line-height: 1.2;
+  }
+  .section-lead {
+    text-align: center; color: var(--slate); max-width: 580px;
+    margin: 0 auto 3.5rem; font-size: 1rem; line-height: 1.8;
+  }
+  .divider {
+    width: 48px; height: 2px; background: var(--gold);
+    margin: 1rem auto 2rem; border: none;
+  }
+
+  /* MANIFESTO */
+  .manifesto { background: var(--ink); }
+  .manifesto .section-title { color: var(--cream); }
+  .manifesto .section-lead { color: rgba(250,247,242,0.6); }
+  .manifesto-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5px; background: rgba(200,169,110,0.15);
+    border: 1px solid rgba(200,169,110,0.15); margin-top: 3rem;
+  }
+  .manifesto-card {
+    background: var(--ink); padding: 2.5rem 2rem;
+    transition: background 0.3s;
+  }
+  .manifesto-card:hover { background: rgba(200,169,110,0.04); }
+  .manifesto-icon {
+    font-size: 1.5rem; margin-bottom: 1rem;
+  }
+  .manifesto-card h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--gold); font-size: 1.1rem; margin-bottom: 0.75rem;
+  }
+  .manifesto-card p { color: rgba(250,247,242,0.6); font-size: 0.9rem; line-height: 1.8; }
+
+  /* PRZYKŁADY UTWORÓW */
+  .utwory { background: var(--cream); }
+  .song-tabs {
+    display: flex; gap: 0; justify-content: center;
+    border-bottom: 1px solid var(--border); margin-bottom: 3rem;
+    overflow-x: auto;
+  }
+  .song-tab {
+    padding: 0.75rem 1.5rem; font-size: 0.85rem; letter-spacing: 0.05em;
+    border: none; background: none; cursor: pointer; color: var(--smoke);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .song-tab.active { color: var(--gold-dark); border-bottom-color: var(--gold); }
+  .song-panel { display: none; }
+  .song-panel.active { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
+  .song-meta { }
+  .song-occasion {
+    display: inline-block; background: var(--cream-dark); color: var(--smoke);
+    font-size: 0.7rem; letter-spacing: 0.15em; padding: 0.3rem 0.75rem;
+    border-radius: 2px; margin-bottom: 1rem; text-transform: uppercase;
+  }
+  .song-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem; margin-bottom: 0.5rem; line-height: 1.2;
+  }
+  .song-artist { color: var(--smoke); font-size: 0.9rem; margin-bottom: 1.5rem; }
+  .song-desc { color: var(--slate); font-size: 0.95rem; line-height: 1.8; margin-bottom: 2rem; }
+  .song-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem; }
+  .song-tag {
+    background: var(--cream-dark); color: var(--slate);
+    font-size: 0.75rem; padding: 0.3rem 0.75rem; border-radius: 20px;
+  }
+  .song-price-box {
+    border: 1px solid var(--border); padding: 1.25rem;
+    border-radius: 4px; background: var(--white);
+  }
+  .song-price-box .price { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--gold-dark); }
+  .song-price-box .price-note { font-size: 0.8rem; color: var(--smoke); margin-top: 0.25rem; }
+  .lyrics-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2rem; position: relative;
+  }
+  .lyrics-card::before {
+    content: '♪';
+    position: absolute; top: 1.25rem; right: 1.5rem;
+    color: var(--gold-light); font-size: 1.5rem;
+  }
+  .lyrics-label { font-size: 0.7rem; letter-spacing: 0.2em; color: var(--smoke); margin-bottom: 1rem; text-transform: uppercase; }
+  .lyrics-text {
+    font-family: 'Playfair Display', serif;
+    font-style: italic; color: var(--ink-soft); font-size: 0.95rem;
+    line-height: 2; white-space: pre-line;
+  }
+
+  @media (max-width: 700px) {
+    .song-panel.active { grid-template-columns: 1fr; }
+  }
+
+  /* PAKIETY / CENNIK */
+  .cennik { background: var(--cream-dark); }
+  .pakiety-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 1.5rem; margin-top: 1rem;
+  }
+  .pakiet {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2.5rem 2rem;
+    position: relative; transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .pakiet:hover { box-shadow: 0 8px 40px rgba(26,20,16,0.1); transform: translateY(-2px); }
+  .pakiet.featured {
+    border-color: var(--gold); border-width: 2px;
+  }
+  .pakiet-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--gold); color: var(--ink);
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+    padding: 0.3rem 1rem; border-radius: 2px;
+  }
+  .pakiet-name {
+    font-size: 0.75rem; letter-spacing: 0.2em; color: var(--smoke);
+    text-transform: uppercase; margin-bottom: 0.5rem;
+  }
+  .pakiet-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem; margin-bottom: 0.5rem;
+  }
+  .pakiet-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem; color: var(--gold-dark); margin: 1rem 0;
+  }
+  .pakiet-price span { font-size: 1rem; font-family: 'DM Sans', sans-serif; color: var(--smoke); }
+  .pakiet-desc { font-size: 0.9rem; color: var(--slate); margin-bottom: 1.5rem; line-height: 1.7; }
+  .pakiet-features { list-style: none; margin-bottom: 2rem; }
+  .pakiet-features li {
+    padding: 0.5rem 0; border-bottom: 1px solid var(--cream-dark);
+    font-size: 0.875rem; color: var(--ink-soft); display: flex; align-items: center; gap: 0.5rem;
+  }
+  .pakiet-features li::before { content: '✓'; color: var(--gold); font-weight: 700; }
+  .btn-pakiet {
+    display: block; text-align: center;
+    padding: 0.75rem 1.5rem; border: 1px solid var(--gold);
+    color: var(--gold-dark); font-size: 0.85rem; font-weight: 600;
+    letter-spacing: 0.05em; text-decoration: none; border-radius: 2px;
+    transition: all 0.2s; cursor: pointer; background: none; width: 100%;
+  }
+  .btn-pakiet:hover, .pakiet.featured .btn-pakiet {
+    background: var(--gold); color: var(--ink);
+  }
+
+  /* O MNIE */
+  .o-mnie { background: var(--white); }
+  .o-mnie-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 5rem; align-items: center; }
+  .o-mnie-visual {
+    position: relative;
+  }
+  .o-mnie-img-placeholder {
+    width: 100%; aspect-ratio: 4/5;
+    background: linear-gradient(135deg, #1F3D2F 0%, #2D1F10 100%);
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-size: 4rem; color: rgba(200,169,110,0.3);
+  }
+  .o-mnie-quote-box {
+    position: absolute; bottom: -2rem; right: -2rem;
+    background: var(--white); border: 1px solid var(--border);
+    padding: 1.25rem; border-radius: 4px; max-width: 240px;
+    box-shadow: var(--shadow);
+  }
+  .o-mnie-quote-text { font-family: 'Playfair Display', serif; font-style: italic; font-size: 0.9rem; color: var(--ink-soft); }
+  .o-mnie-quote-author { font-size: 0.75rem; color: var(--smoke); margin-top: 0.5rem; }
+  .o-mnie-eyebrow { color: var(--gold); font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 1rem; }
+  .o-mnie h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 1.5rem; line-height: 1.2; }
+  .o-mnie p { color: var(--slate); line-height: 1.9; margin-bottom: 1.25rem; font-size: 0.95rem; }
+  .o-mnie p strong { color: var(--ink); }
+  .ai-manifesto-box {
+    background: var(--cream); border-left: 3px solid var(--gold);
+    padding: 1.25rem 1.5rem; border-radius: 0 4px 4px 0; margin: 2rem 0;
+  }
+  .ai-manifesto-box p { font-style: italic; color: var(--ink-soft); margin: 0; }
+  .credentials { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
+  .credential { text-align: center; }
+  .credential-num { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold-dark); }
+  .credential-label { font-size: 0.75rem; color: var(--smoke); }
+  @media (max-width: 800px) {
+    .o-mnie-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .o-mnie-quote-box { position: static; margin-top: 1rem; max-width: 100%; }
+  }
+
+  /* OPINIE */
+  .opinie { background: var(--ink); }
+  .opinie .section-title { color: var(--cream); }
+  .opinie .section-lead { color: rgba(250,247,242,0.5); }
+  .opinie-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+  .opinia {
+    background: rgba(250,247,242,0.04); border: 1px solid rgba(200,169,110,0.15);
+    padding: 2rem; border-radius: 4px;
+  }
+  .opinia-stars { color: var(--gold); font-size: 0.85rem; margin-bottom: 1rem; }
+  .opinia-text {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    color: rgba(250,247,242,0.8); font-size: 0.95rem; line-height: 1.8;
+    margin-bottom: 1.5rem;
+  }
+  .opinia-author { font-size: 0.8rem; color: var(--smoke); }
+  .opinia-author strong { color: var(--gold-light); display: block; }
+
+  /* FORMULARZ */
+  .formularz { background: var(--cream); }
+  .form-container {
+    max-width: 800px; margin: 0 auto;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3rem;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .form-group { margin-bottom: 1.25rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    display: block; font-size: 0.8rem; font-weight: 500;
+    letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 0.4rem;
+  }
+  label .req { color: var(--gold); }
+  input[type="text"], input[type="email"], input[type="tel"], input[type="date"],
+  select, textarea {
+    width: 100%; padding: 0.7rem 1rem; border: 1px solid var(--border);
+    border-radius: 2px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    color: var(--ink); background: var(--cream); transition: border-color 0.2s;
+    outline: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); background: var(--white); }
+  textarea { resize: vertical; min-height: 120px; }
+  .form-section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--ink-soft);
+    margin: 2rem 0 1.25rem;
+    padding-bottom: 0.5rem; border-bottom: 1px solid var(--cream-dark);
+    grid-column: 1 / -1;
+  }
+  .form-radio-group { display: flex; flex-wrap: wrap; gap: 0.5rem; grid-column: 1 / -1; }
+  .form-radio-label {
+    border: 1px solid var(--border); padding: 0.5rem 1rem;
+    border-radius: 2px; font-size: 0.85rem; cursor: pointer;
+    color: var(--slate); transition: all 0.2s;
+  }
+  .form-radio-label input { display: none; }
+  .form-radio-label:has(input:checked) {
+    background: var(--gold); border-color: var(--gold); color: var(--ink); font-weight: 600;
+  }
+  .form-slider-wrapper { grid-column: 1 / -1; }
+  .form-slider {
+    width: 100%; appearance: none; height: 4px;
+    background: var(--cream-dark); border-radius: 2px; outline: none;
+    border: none; padding: 0;
+  }
+  .form-slider::-webkit-slider-thumb {
+    appearance: none; width: 18px; height: 18px;
+    background: var(--gold); border-radius: 50%; cursor: pointer;
+  }
+  .slider-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--smoke); margin-top: 0.5rem; }
+  .form-submit {
+    grid-column: 1 / -1; text-align: center; margin-top: 1rem;
+  }
+  .btn-submit {
+    background: var(--gold); color: var(--ink); padding: 1rem 3rem;
+    font-size: 0.9rem; font-weight: 700; letter-spacing: 0.1em;
+    border: none; border-radius: 2px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-submit:hover { background: #D4B478; transform: translateY(-1px); }
+  .form-note { font-size: 0.78rem; color: var(--smoke); margin-top: 0.75rem; }
+  .form-gwarancja {
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--cream); border: 1px solid var(--border);
+    padding: 1rem 1.25rem; border-radius: 4px; margin-top: 2rem;
+    grid-column: 1 / -1;
+  }
+  .gwarancja-icon { font-size: 1.5rem; }
+  .gwarancja-text { font-size: 0.85rem; color: var(--slate); line-height: 1.6; }
+  .gwarancja-text strong { color: var(--ink-soft); }
+
+  /* FAQ */
+  .faq { background: var(--cream-dark); }
+  .faq-list { max-width: 720px; margin: 0 auto; }
+  .faq-item { border-bottom: 1px solid var(--border); }
+  .faq-q {
+    width: 100%; text-align: left; background: none; border: none;
+    padding: 1.25rem 0; font-size: 0.95rem; font-weight: 500; cursor: pointer;
+    color: var(--ink); display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq-q::after { content: '+'; color: var(--gold); font-size: 1.2rem; transition: transform 0.2s; }
+  .faq-q.open::after { transform: rotate(45deg); }
+  .faq-a { display: none; padding: 0 0 1.25rem; color: var(--slate); font-size: 0.9rem; line-height: 1.8; }
+  .faq-a.open { display: block; }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink); color: rgba(250,247,242,0.5);
+    padding: 3rem 2rem; text-align: center;
+  }
+  .footer-logo {
+    font-family: 'Playfair Display', serif; font-size: 1.3rem;
+    color: var(--gold); margin-bottom: 0.5rem;
+  }
+  .footer-tagline { font-size: 0.8rem; margin-bottom: 2rem; }
+  .footer-links { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+  .footer-links a { color: rgba(250,247,242,0.5); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--gold); }
+  .footer-copy { font-size: 0.75rem; }
+
+  /* STICKY CTA bar */
+  .sticky-cta {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+    background: rgba(26,20,16,0.97); border-top: 1px solid rgba(200,169,110,0.2);
+    padding: 0.75rem 2rem; display: flex; align-items: center; justify-content: space-between;
+    transform: translateY(100%); transition: transform 0.4s;
+  }
+  .sticky-cta.visible { transform: translateY(0); }
+  .sticky-cta-text { color: rgba(250,247,242,0.8); font-size: 0.9rem; }
+  .sticky-cta-text strong { color: var(--gold); }
+
+  @media (max-width: 600px) {
+    nav { padding: 0 1rem; }
+    .nav-links { display: none; }
+    section { padding: 3.5rem 1.25rem; }
+    .form-container { padding: 1.75rem 1.25rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .form-section-title { grid-column: 1; }
+    .form-radio-group { grid-column: 1; }
+    .form-slider-wrapper { grid-column: 1; }
+    .form-submit { grid-column: 1; }
+    .form-gwarancja { grid-column: 1; }
+    .hero-badges { gap: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav>
+  <div class="nav-brand">
+    Muzyczna Kreacja Słów
+    <span>TWÓJ MUZYCZNY AZYL</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#manifesto">Filozofia</a></li>
+    <li><a href="#utwory">Przykłady</a></li>
+    <li><a href="#cennik">Pakiety</a></li>
+    <li><a href="#o-mnie">O mnie</a></li>
+    <li><a href="#opinie">Opinie</a></li>
+  </ul>
+  <a href="#formularz" class="nav-cta">Zamów Utwór</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-ornament"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">♩ Muzyczna Kreacja Słów ♩</p>
+    <h1>Twój <em>Muzyczny Azyl</em><br>stworzony dla Ciebie</h1>
+    <p class="hero-sub">Spersonalizowane Utwory na Zamówienie — dla każdego, na każdą okazję i na każdą kieszeń</p>
+    <p class="hero-desc">
+      Tam, gdzie AI tworzy szablony, my tworzymy przeżycia. Każda piosenka rodzi się z Twojej historii,
+      z emocji, których nie da się wpisać w formularz algorytmu. Muzyka z duszą — bo za każdą nutą stoi człowiek.
+    </p>
+    <div class="hero-actions">
+      <a href="#formularz" class="btn-primary">Zamów swój utwór</a>
+      <a href="#utwory" class="btn-secondary">Posłuchaj przykładów</a>
+    </div>
+    <div class="hero-badges">
+      <div class="hero-badge">
+        <div class="hero-badge-num">200+</div>
+        <div class="hero-badge-label">Zadowolonych klientów</div>
+      </div>
+      <div class="hero-badge">
+        <div class="hero-badge-num">15+</div>
+        <div class="hero-badge-label">Lat doświadczenia</div>
+      </div>
+      <div class="hero-badge">
+        <div class="hero-badge-num">48h</div>
+        <div class="hero-badge-label">Czas realizacji demo</div>
+      </div>
+      <div class="hero-badge">
+        <div class="hero-badge-num">100%</div>
+        <div class="hero-badge-label">Satysfakcji gwarantowanej</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MANIFESTO -->
+<section class="manifesto" id="manifesto">
+  <div class="container">
+    <p class="section-eyebrow">Nasza Filozofia</p>
+    <h2 class="section-title" style="color:var(--cream)">Muzyczna Kreacja Słów wyszła naprzeciw AI,<br>by tworzyć muzykę, która ma sens</h2>
+    <hr class="divider">
+    <p class="section-lead" style="color:rgba(250,247,242,0.55)">
+      Żyjemy w erze, gdy sztuczna inteligencja generuje tysiące piosenek na sekundę.
+      Pięknych technicznie. Pustych emocjonalnie. My wybraliśmy inną drogę.
+    </p>
+    <div class="manifesto-grid">
+      <div class="manifesto-card">
+        <div class="manifesto-icon">🎵</div>
+        <h3>Dusza, której AI nie ma</h3>
+        <p>Algorytm nie zna historii Twojego związku, nie pamięta zapachu pierwszego spotkania. My pytamy, słuchamy, rozumiemy — i dopiero wtedy piszemy.</p>
+      </div>
+      <div class="manifesto-card">
+        <div class="manifesto-icon">✍️</div>
+        <h3>Każde słowo ma znaczenie</h3>
+        <p>Tekst tworzony ręcznie, z uwzględnieniem Twojego języka, Twoich wspomnień i Twojej wizji. Nie szablon — opowieść.</p>
+      </div>
+      <div class="manifesto-card">
+        <div class="manifesto-icon">🎸</div>
+        <h3>Muzyka dopasowana do emocji</h3>
+        <p>Gatunek, tempo, instrumentacja — wszystko dobrane do nastroju, który chcesz przekazać. Od ballady po hip-hop, od akustyki po orkiestrę.</p>
+      </div>
+      <div class="manifesto-card">
+        <div class="manifesto-icon">🤝</div>
+        <h3>Partnerstwo, nie usługa</h3>
+        <p>Pracujemy razem. Konsultacje, korekty, dialog — dopóki nie poczujesz, że ta piosenka jest naprawdę Twoja.</p>
+      </div>
+      <div class="manifesto-card">
+        <div class="manifesto-icon">💎</div>
+        <h3>Jakość na każdą kieszeń</h3>
+        <p>Od prostego demo akustycznego po pełnę produkcję studyjną. Piękna muzyka nie musi kosztować fortuny.</p>
+      </div>
+      <div class="manifesto-card">
+        <div class="manifesto-icon">🏆</div>
+        <h3>Lepsza niż sam AI</h3>
+        <p>Używamy narzędzi cyfrowych tam, gdzie mają sens — jako wsparcie. Ale decyzje artystyczne, emocje i kreatywność? To zawsze człowiek.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRZYKŁADY UTWORÓW -->
+<section class="utwory" id="utwory">
+  <div class="container">
+    <p class="section-eyebrow">Przykłady Naszych Realizacji</p>
+    <h2 class="section-title">Muzyka, która już zmieniła<br>czyjeś ważne chwile</h2>
+    <hr class="divider">
+    <p class="section-lead">Każdy utwór to prawdziwa historia. Poniżej wybrane realizacje — oczywiście za zgodą klientów.</p>
+
+    <div class="song-tabs">
+      <button class="song-tab active" onclick="showSong('wesele')">💍 Ślub i Wesele</button>
+      <button class="song-tab" onclick="showSong('urodziny')">🎂 Urodziny</button>
+      <button class="song-tab" onclick="showSong('dziecko')">👶 Narodziny</button>
+      <button class="song-tab" onclick="showSong('biznes')">🏢 Firmowy</button>
+      <button class="song-tab" onclick="showSong('pozegnanie')">💫 Pożegnanie</button>
+    </div>
+
+    <!-- WESELE -->
+    <div class="song-panel active" id="song-wesele">
+      <div class="song-meta">
+        <span class="song-occasion">Pierwszy Taniec</span>
+        <h3 class="song-title">„Właśnie Ty"</h3>
+        <p class="song-artist">dla Karoliny i Macieja — Kraków, 2024</p>
+        <p class="song-desc">Małgorzata poprosiła nas o utwór, który opowie historię jej związku — od przypadkowego spotkania na Kazimierzu, przez trudne miesiące rozstania, aż po powrót i zaręczyny. Ballada pop z elementami jazzu. Realizacja: 6 dni, 2 korekty tekstu.</p>
+        <div class="song-tags">
+          <span class="song-tag">Ballada</span>
+          <span class="song-tag">Pop</span>
+          <span class="song-tag">Pierwszy taniec</span>
+          <span class="song-tag">Studio 3 dni</span>
+        </div>
+        <div class="song-price-box">
+          <div class="price">od 890 zł</div>
+          <div class="price-note">Pakiet Srebrny + nagranie wokalne</div>
+        </div>
+      </div>
+      <div class="lyrics-card">
+        <div class="lyrics-label">Fragment utworu</div>
+        <div class="lyrics-text">Znaleźliśmy się przez przypadek
+na bruku między kawiarnią a snem,
+Twój śmiech rozświetlił tamten zaułek
+i nie pamiętam już jak żyć bez Cię.
+
+Właśnie Ty — przez wszystkie burze,
+Właśnie Ty — gdy świat się burzy,
+W Twoich dłoniach mam swój azyl,
+Właśnie Ty. Zawsze Ty.
+
+Przez noce, gdy milczenie krzyczało,
+przez mosty, które sami spaliliśmy —
+wróciłeś i nagle wszystko miało sens,
+bo bez Ciebie byłem tylko połową siebie.</div>
+      </div>
+    </div>
+
+    <!-- URODZINY -->
+    <div class="song-panel" id="song-urodziny">
+      <div class="song-meta">
+        <span class="song-occasion">50. Urodziny</span>
+        <h3 class="song-title">„Pół wieku piękna"</h3>
+        <p class="song-artist">dla Bożeny — od rodziny, Warszawa, 2023</p>
+        <p class="song-desc">Dzieci poprosiły o żartobliwy, ciepły utwór dla mamy świętującej 50. urodziny. Chciały, by nawiązywał do jej pasji (gotowanie, ogród, taniec) i do konkretnych wspomnień z wakacji nad morzem. Efekt — płakała ze śmiechu i ze wzruszenia jednocześnie.</p>
+        <div class="song-tags">
+          <span class="song-tag">Pop-folk</span>
+          <span class="song-tag">Żartobliwy</span>
+          <span class="song-tag">Ciepły</span>
+          <span class="song-tag">Demo 48h</span>
+        </div>
+        <div class="song-price-box">
+          <div class="price">od 490 zł</div>
+          <div class="price-note">Pakiet Złoty (prezent grupowy)</div>
+        </div>
+      </div>
+      <div class="lyrics-card">
+        <div class="lyrics-label">Fragment utworu</div>
+        <div class="lyrics-text">Pół wieku piękna na karku masz,
+a Twój ogród kwitnie mocniej niż marzenia nasze,
+zupy pachną tak, że z sąsiedztwa ktoś zagląda,
+a na parkiecie — Boże, kto Cię tak nauczył?
+
+Mamo, jesteś cudem mierzonym w latach,
+w barszczu, w różach i w letnim tańcu,
+pięćdziesiąt lat i wyglądasz jak trzydzieści —
+powiedz, gdzie to złoto zakopałaś?</div>
+      </div>
+    </div>
+
+    <!-- DZIECKO -->
+    <div class="song-panel" id="song-dziecko">
+      <div class="song-meta">
+        <span class="song-occasion">Narodziny Dziecka</span>
+        <h3 class="song-title">„Witaj na świecie, mały"</h3>
+        <p class="song-artist">dla Zosi — od Taty, Gdańsk, 2024</p>
+        <p class="song-desc">Tomek napisał do nas tydzień przed porodem. Chciał mieć gotową piosenkę na powitanie córki. Nie znał imienia — wiedział tylko, że będzie dziewczynka. Utwór nagraliśmy w 4 dni, finalna wersja z imionami — 24h po porodzie.</p>
+        <div class="song-tags">
+          <span class="song-tag">Kołysanka</span>
+          <span class="song-tag">Akustyczna</span>
+          <span class="song-tag">Gitara + wokal</span>
+          <span class="song-tag">Ekspres 24h</span>
+        </div>
+        <div class="song-price-box">
+          <div class="price">od 350 zł</div>
+          <div class="price-note">Pakiet Brązowy + ekspresowa wersja</div>
+        </div>
+      </div>
+      <div class="lyrics-card">
+        <div class="lyrics-label">Fragment kołysanki</div>
+        <div class="lyrics-text">Zosiu mała, witaj tu,
+czekaliśmy na Cię tak długo,
+świat jest wielki, pełen barw,
+a my — Twoi — przy Tobie zawsze.
+
+Śpij, Zosiu, śpij,
+gwiazdki piszą Twoje imię,
+tato trzyma Twoją dłoń —
+jesteś cała i piękna, i prawdziwa.
+
+Nauczymy Cię wszystkiego,
+jak się wstaje gdy pada deszcz,
+jak się śmieje przez łzy szczęścia —
+dziś jesteś naszym nowym niebem.</div>
+      </div>
+    </div>
+
+    <!-- BIZNES -->
+    <div class="song-panel" id="song-biznes">
+      <div class="song-meta">
+        <span class="song-occasion">Jubileusz Firmy</span>
+        <h3 class="song-title">„20 lat razem"</h3>
+        <p class="song-artist">dla TechStar Sp. z o.o. — Wrocław, 2024</p>
+        <p class="song-desc">Firma obchodziła 20-lecie i chciała czegoś więcej niż przemówienia. Utwór zaśpiewany przez pracowników na gali — tekst nawiązywał do historii firmy, jej wartości i konkretnych sukcesów. Teraz jest himnem firmy.</p>
+        <div class="song-tags">
+          <span class="song-tag">Rock-pop</span>
+          <span class="song-tag">Motywacyjny</span>
+          <span class="song-tag">Chóralny</span>
+          <span class="song-tag">Produkcja premium</span>
+        </div>
+        <div class="song-price-box">
+          <div class="price">od 1 900 zł</div>
+          <div class="price-note">Pakiet Platynowy — produkcja pełna</div>
+        </div>
+      </div>
+      <div class="lyrics-card">
+        <div class="lyrics-label">Fragment hymnu firmowego</div>
+        <div class="lyrics-text">Dwadzieścia lat temu — biuro, komputer i sen,
+dziś nasza marka brzmi w całej Europie,
+przeszliśmy przez kryzysy, zmiany i czas,
+bo razem jesteśmy silniejsi niż każdy z nas.
+
+Raz, dwa, dwadzieścia lat!
+To nie jest liczba — to nasz dorobek, brat,
+każda decyzja, każdy projekt, każdy błąd —
+dziś zmienia się w historię, której nie chciem sprzedać!</div>
+      </div>
+    </div>
+
+    <!-- POŻEGNANIE -->
+    <div class="song-panel" id="song-pozegnanie">
+      <div class="song-meta">
+        <span class="song-occasion">Utwór Pożegnalny</span>
+        <h3 class="song-title">„Jesteś dalej tu"</h3>
+        <p class="song-artist">dla Rodziny Kowalskich — Poznań, 2023</p>
+        <p class="song-desc">Jeden z najtrudniejszych i najważniejszych projektów. Rodzina chciała pożegnać tatę w taki sposób, jaki on by pokochał — ciepło, z humorem i z szacunkiem. Utwór oparty o jego ukochane melodie i cytaty. Śpiewali go razem na pogrzebie.</p>
+        <div class="song-tags">
+          <span class="song-tag">Ballada</span>
+          <span class="song-tag">Pożegnanie</span>
+          <span class="song-tag">Ciepłe</span>
+          <span class="song-tag">Z humorem</span>
+        </div>
+        <div class="song-price-box">
+          <div class="price">od 690 zł</div>
+          <div class="price-note">Pakiet Srebrny — z konsultacją rodzinną</div>
+        </div>
+      </div>
+      <div class="lyrics-card">
+        <div class="lyrics-label">Fragment piosenki</div>
+        <div class="lyrics-text">Tato, wiemy, że siedzisz gdzieś wyżej,
+pilnujesz, żebyśmy nie przeklinali przy mamie,
+sprawdzasz czy ogród podlany, czy koło naprawione —
+zawsze będziesz z nami, choć inaczej niż dawniej.
+
+Jesteś dalej tu — w zapachu kawy rano,
+w starym krześle, gdzie siadałeś co niedzielę,
+w tym śmiechu, który wszyscy po Tobie mamy —
+jesteś dalej tu. I zawsze tak zostanie.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CENNIK -->
+<section class="cennik" id="cennik">
+  <div class="container">
+    <p class="section-eyebrow">Pakiety i Cennik</p>
+    <h2 class="section-title">Muzyka piękna na każdą kieszeń</h2>
+    <hr class="divider">
+    <p class="section-lead">Przejrzyste ceny, bez ukrytych kosztów. Każdy pakiet możemy dostosować do Twoich potrzeb.</p>
+    <div class="pakiety-grid">
+      <div class="pakiet featured">
+        <span class="pakiet-badge">NAJTAŃSZY</span>
+        <p class="pakiet-name">Pakiet</p>
+        <h3 class="pakiet-title">Mini ✦</h3>
+        <div class="pakiet-price">49 zł <span>/ utwór</span></div>
+        <p class="pakiet-desc">Krótki, słodki utwór idealny na szybki prezent lub małe co nieco.</p>
+        <ul class="pakiet-features">
+          <li>Krótki tekst (1 zwrotka + refren)</li>
+          <li>Melodia + podkład generowany</li>
+          <li>1 konsultacja online 15 min</li>
+          <li>1 korekta tekstu</li>
+          <li>Plik MP3</li>
+          <li>Realizacja: 2–3 dni robocze</li>
+        </ul>
+        <button class="btn-pakiet" onclick="document.getElementById('formularz').scrollIntoView({behavior:'smooth'})">Wybieram Mini</button>
+      </div>
+      <div class="pakiet">
+        <p class="pakiet-name">Pakiet</p>
+        <h3 class="pakiet-title">Standard ✦✦</h3>
+        <div class="pakiet-price">99 zł <span>/ utwór</span></div>
+        <p class="pakiet-desc">Pełniejszy utwór z dłuższym tekstem i lepszym nagraniem.</p>
+        <ul class="pakiet-features">
+          <li>Pełny tekst (2 zwrotki + refren)</li>
+          <li>Nagranie z akompaniamentem</li>
+          <li>Konsultacja 30 min + brief</li>
+          <li>2 korekty tekstu</li>
+          <li>Plik MP3 + notatka</li>
+          <li>Realizacja: 3–5 dni roboczych</li>
+        </ul>
+        <button class="btn-pakiet" onclick="document.getElementById('formularz').scrollIntoView({behavior:'smooth'})">Wybieram Standard</button>
+      </div>
+      <div class="pakiet">
+        <p class="pakiet-name">Pakiet</p>
+        <h3 class="pakiet-title">Premium ✦✦✦</h3>
+        <div class="pakiet-price">199 zł <span>/ utwór</span></div>
+        <p class="pakiet-desc">Pełna produkcja z wokalem. Dla tych, którzy chcą prawdziwego utworu.</p>
+        <ul class="pakiet-features">
+          <li>Rozbudowany tekst (3 zwrotki + refren + bridge)</li>
+          <li>Nagranie wokalne (profesjonalny wokal)</li>
+          <li>Konsultacja 60 min + pogłębiony wywiad</li>
+          <li>Nieograniczone korekty</li>
+          <li>Plik WAV + MP3 w wysokiej jakości</li>
+          <li>Realizacja: 5–7 dni roboczych</li>
+        </ul>
+        <button class="btn-pakiet" onclick="document.getElementById('formularz').scrollIntoView({behavior:'smooth'})">Wybieram Premium</button>
+      </div>
+      <div class="pakiet">
+        <p class="pakiet-name">Pakiet</p>
+        <h3 class="pakiet-title">Firmowy ✦✦✦✦</h3>
+        <div class="pakiet-price">od 399 zł</div>
+        <p class="pakiet-desc">Dla firm i zespołów — hymn, piosenka integracyjna lub branding audio.</p>
+        <ul class="pakiet-features">
+          <li>Pełna produkcja na miarę</li>
+          <li>Opcja z żywymi instrumentami</li>
+          <li>Dedykowany opiekun projektu</li>
+          <li>Prawa autorskie w cenie</li>
+          <li>Hymn firmowy / event branding</li>
+          <li>Realizacja: ustalana indywidualnie</li>
+        </ul>
+        <button class="btn-pakiet" onclick="document.getElementById('formularz').scrollIntoView({behavior:'smooth'})">Wycena indywidualna</button>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top: 2rem; color: var(--smoke); font-size: 0.85rem;">
+      🚀 Realizacja ekspresowa (+50% do ceny) · 💝 Rabat grupowy od 3 osób · 🎁 Vouchery podarunkowe dostępne
+    </p>
+  </div>
+</section>
+
+<!-- O MNIE -->
+<section class="o-mnie" id="o-mnie">
+  <div class="container">
+    <div class="o-mnie-grid">
+      <div class="o-mnie-visual">
+        <div class="o-mnie-img-placeholder">🎵</div>
+        <div class="o-mnie-quote-box">
+          <div class="o-mnie-quote-text">„Muzyka jest językiem, którym opowiadamy to, czego słowa nie mogą powiedzieć."</div>
+          <div class="o-mnie-quote-author">— Muzyczna Kreacja Słów</div>
+        </div>
+      </div>
+      <div>
+        <p class="o-mnie-eyebrow">Kim Jesteśmy</p>
+        <h2>Muzyczna Kreacja Słów —<br>my kontra AI</h2>
+        <p>Jesteśmy twórcami, którzy przez lata obserwowali, jak <strong>sztuczna inteligencja wkracza na rynek muzyczny</strong>. Piękne, szybkie, tanie piosenki. Setki na godzinę. Ale coś w nich zawsze brakowało — <strong>Ciebie</strong>.</p>
+        <p>Muzyczna Kreacja Słów powstała właśnie po to, żeby odpowiedzieć na to wyzwanie. Nie jako kontra-AI, ale jako propozycja czegoś, co algorytm nigdy nie zastąpi: <strong>rozumienia człowieka przez człowieka</strong>.</p>
+        <div class="ai-manifesto-box">
+          <p>„AI może przetworzyć milion piosenek. Ale nie zapyta Cię, jak pachniała kawiarnia, w której się poznaliście. Nie zapamięta, że Twoja mama zawsze śpiewała przy gotowaniu. Nie pocznie się śmiać razem z Tobą z tego głupiego żartu, który Wam się stał tradycją. My pytamy. I słuchamy naprawdę."</p>
+        </div>
+        <p>Mamy za sobą ponad <strong>15 lat pracy muzycznej</strong> — teksty, aranżacje, nagrania, projekty studyjne. Tworzymy muzykę dla ludzi, którym zależy na autentyczności. Używamy narzędzi cyfrowych jako wsparcia — ale <strong>każda decyzja artystyczna należy do nas</strong>.</p>
+        <div class="credentials">
+          <div class="credential">
+            <div class="credential-num">15+</div>
+            <div class="credential-label">lat w muzyce</div>
+          </div>
+          <div class="credential">
+            <div class="credential-num">200+</div>
+            <div class="credential-label">zrealizowanych piosenek</div>
+          </div>
+          <div class="credential">
+            <div class="credential-num">98%</div>
+            <div class="credential-label">polecałoby nas dalej</div>
+          </div>
+          <div class="credential">
+            <div class="credential-num">8</div>
+            <div class="credential-label">gatunków muzycznych</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OPINIE -->
+<section class="opinie" id="opinie">
+  <div class="container">
+    <p class="section-eyebrow" style="color:var(--gold)">Co Mówią Klienci</p>
+    <h2 class="section-title">Każda piosenka — inna historia</h2>
+    <hr class="divider">
+    <p class="section-lead">Prawdziwe opinie, prawdziwi ludzie.</p>
+    <div class="opinie-grid">
+      <div class="opinia">
+        <div class="opinia-stars">★★★★★</div>
+        <p class="opinia-text">„Kiedy puściliśmy tę piosenkę na weselu, połowa gości płakała. Mąż nie wiedział, że go zamówiłam — jego mina, gdy rozpoznał nasze wspomnienia w tekście, była bezcenna. To jest właśnie to, czego ChatGPT nie zrobi za Ciebie."</p>
+        <p class="opinia-author"><strong>Karolina W.</strong>Kraków · Pakiet Srebrny · Pierwszy taniec</p>
+      </div>
+      <div class="opinia">
+        <div class="opinia-stars">★★★★★</div>
+        <p class="opinia-text">„Zamówiłam piosenkę na 50. urodziny mamy od całej rodziny. Tekst był tak trafny, tak osobisty — opowiadał o jej ogrodzie, zupach i tym jak tańczy przy zmywaniu. Powiedziała, że to najlepszy prezent w życiu."</p>
+        <p class="opinia-author"><strong>Anna K.</strong>Warszawa · Pakiet Złoty · Urodziny</p>
+      </div>
+      <div class="opinia">
+        <div class="opinia-stars">★★★★★</div>
+        <p class="opinia-text">„Jako firma obchodzimy 20-lecie. Chciałem czegoś więcej niż tort i przemówienia. Ten hymn śpiewaliśmy razem na gali — emocje były niesamowite. Inwestycja, która zwróciła się w teambuilding i zaangażowaniu."</p>
+        <p class="opinia-author"><strong>Marek T.</strong>Wrocław · Pakiet Platynowy · Jubileusz firmy</p>
+      </div>
+      <div class="opinia">
+        <div class="opinia-stars">★★★★★</div>
+        <p class="opinia-text">„Piosenka pożegnalna dla taty. Najtrudniejsze zamówienie w moim życiu. Oni to zrozumieli — zadzwonili, rozmawiali, pytali o konkretne wspomnienia. Utwór był ciepły, z humorem i bez łzawości. Tato by to kochał."</p>
+        <p class="opinia-author"><strong>Piotr K.</strong>Poznań · Pakiet Srebrny · Pożegnanie</p>
+      </div>
+      <div class="opinia">
+        <div class="opinia-stars">★★★★★</div>
+        <p class="opinia-text">„Kołysanka dla córeczki gotowa 24 godziny po porodzie, z jej imieniem i datą urodzenia. Oni dotrzymali słowa. Płakałem nagrywając jej to na wideo. Polecam każdemu świeżemu tacie."</p>
+        <p class="opinia-author"><strong>Tomasz N.</strong>Gdańsk · Pakiet Brązowy · Narodziny</p>
+      </div>
+      <div class="opinia">
+        <div class="opinia-stars">★★★★★</div>
+        <p class="opinia-text">„Próbowałam AI — dostałam coś okropnie ogólnego. Tutaj dostałam piosenkę, w której było nasze miasto, nasz park, nasze słowa. Cena i czas realizacji — bez zarzutu. Zdecydowanie polecam."</p>
+        <p class="opinia-author"><strong>Marta S.</strong>Łódź · Pakiet Srebrny · Rocznica związku</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FORMULARZ -->
+<section class="formularz" id="formularz">
+  <div class="container">
+    <p class="section-eyebrow">Zamów Swój Utwór</p>
+    <h2 class="section-title">Opowiedz nam swoją historię</h2>
+    <hr class="divider">
+    <p class="section-lead">Im więcej nam powiesz, tym lepsza będzie Twoja piosenka. Formularz zajmie ok. 5–10 minut.</p>
+
+    <div class="form-container">
+      <form id="zamowienie-form">
+        <div class="form-grid">
+
+          <div class="form-section-title">📋 Dane kontaktowe</div>
+
+          <div class="form-group">
+            <label>Imię i nazwisko <span class="req">*</span></label>
+            <input type="text" placeholder="Jan Kowalski" required>
+          </div>
+          <div class="form-group">
+            <label>Adres e-mail <span class="req">*</span></label>
+            <input type="email" placeholder="jan@przyklad.pl" required>
+          </div>
+          <div class="form-group">
+            <label>Telefon</label>
+            <input type="tel" placeholder="+48 500 000 000">
+          </div>
+          <div class="form-group">
+            <label>Skąd o nas wiesz?</label>
+            <select>
+              <option value="">Wybierz...</option>
+              <option>Google</option>
+              <option>Facebook / Instagram</option>
+              <option>Polecenie znajomego</option>
+              <option>Inne</option>
+            </select>
+          </div>
+
+          <div class="form-section-title">🎵 Szczegóły zamówienia</div>
+
+          <div class="form-group full">
+            <label>Pakiet <span class="req">*</span></label>
+            <div class="form-radio-group">
+              <label class="form-radio-label"><input type="radio" name="pakiet" value="mini" checked> Mini (49 zł)</label>
+              <label class="form-radio-label"><input type="radio" name="pakiet" value="standard"> Standard (99 zł)</label>
+              <label class="form-radio-label"><input type="radio" name="pakiet" value="premium"> Premium (199 zł)</label>
+              <label class="form-radio-label"><input type="radio" name="pakiet" value="firmowy"> Firmowy (od 399 zł)</label>
+              <label class="form-radio-label"><input type="radio" name="pakiet" value="voucher"> Voucher prezentowy</label>
+            </div>
+          </div>
+
+          <div class="form-group full">
+            <label>Okazja / cel piosenki <span class="req">*</span></label>
+            <div class="form-radio-group">
+              <label class="form-radio-label"><input type="radio" name="okazja" value="slub"> 💍 Ślub / wesele</label>
+              <label class="form-radio-label"><input type="radio" name="okazja" value="urodziny"> 🎂 Urodziny</label>
+              <label class="form-radio-label"><input type="radio" name="okazja" value="rocznica"> ❤️ Rocznica</label>
+              <label class="form-radio-label"><input type="radio" name="okazja" value="narodziny"> 👶 Narodziny</label>
+              <label class="form-radio-label"><input type="radio" name="okazja" value="pozegnanie"> 💫 Pożegnanie</label>
+              <label class="form-radio-label"><input type="radio" name="okazja" value="firmowy"> 🏢 Firmowy / jubileusz</label>
+              <label class="form-radio-label"><input type="radio" name="okazja" value="inne"> ✨ Inna</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Data potrzebna do (jeśli konkretna)</label>
+            <input type="date">
+          </div>
+          <div class="form-group">
+            <label>Potrzebujesz realizacji ekspresowej?</label>
+            <select>
+              <option value="nie">Nie (standardowy czas)</option>
+              <option value="tak48">Tak — 48 godzin (+50%)</option>
+              <option value="tak24">Tak — 24 godziny (+80%)</option>
+            </select>
+          </div>
+
+          <div class="form-section-title">❤️ Twoja historia</div>
+
+          <div class="form-group full">
+            <label>Dla kogo jest piosenka? Opisz tę osobę / sytuację <span class="req">*</span></label>
+            <textarea rows="4" placeholder="Np. Piosenka dla mojej żony Kasi na nasze 10. rocznicę ślubu. Poznaliśmy się na studiach w Krakowie, ona jest nauczycielką, kocha koty i gotowanie, ma charakterystyczny śmiech..."></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Co chcesz przekazać / jakie emocje wywołać?</label>
+            <textarea rows="3" placeholder="Np. Chcę, żeby wiedziała jak bardzo ją kocham, że doceniam jej codzienne staranie, że pamiętam nasze wspólne przygody..."></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Konkretne wspomnienia, miejsca, daty, żarty — wszystko, co ją/jego wyróżnia</label>
+            <textarea rows="4" placeholder="Np. Nasza kawiarnia 'Pod Baranami', wycieczka do Włoch w 2019 gdzie zaraz wpadliśmy na deszcz, jej ulubiona piosenka to..., on zawsze mówi..."></textarea>
+          </div>
+
+          <div class="form-section-title">🎸 Preferencje muzyczne</div>
+
+          <div class="form-group full">
+            <label>Gatunek muzyczny</label>
+            <div class="form-radio-group">
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="pop"> Pop</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="ballada"> Ballada</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="folk"> Folk / akustyka</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="rock"> Rock</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="jazz"> Jazz / bossa nova</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="hiphop"> Hip-hop / rap</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="klasyczna"> Klasyczna</label>
+              <label class="form-radio-label"><input type="radio" name="gatunek" value="nie-wiem"> Nie wiem — zdaję się na Was</label>
+            </div>
+          </div>
+
+          <div class="form-group full">
+            <label>Nastrój piosenki</label>
+            <div class="form-radio-group">
+              <label class="form-radio-label"><input type="radio" name="nastoj" value="wzruszajacy"> 😢 Wzruszający, poważny</label>
+              <label class="form-radio-label"><input type="radio" name="nastoj" value="radosny"> 😊 Radosny, energetyczny</label>
+              <label class="form-radio-label"><input type="radio" name="nastoj" value="romantyczny"> 💕 Romantyczny, czuły</label>
+              <label class="form-radio-label"><input type="radio" name="nastoj" value="zabawny"> 😄 Zabawny, humorystyczny</label>
+              <label class="form-radio-label"><input type="radio" name="nastoj" value="mieszany"> 🌈 Mieszany (wzruszenie + humor)</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Język piosenki</label>
+            <select>
+              <option>Polski</option>
+              <option>Angielski</option>
+              <option>Polski + angielski (mix)</option>
+              <option>Inny</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Czy masz artystę/wykonawcę do nagrania?</label>
+            <select>
+              <option>Nie — proszę o wykonawcę od Was</option>
+              <option>Tak — dam link/próbkę głosu</option>
+              <option>Sam/a chcę nagrać (z pomocą)</option>
+            </select>
+          </div>
+
+          <div class="form-group full form-slider-wrapper">
+            <label>Budżet dodatkowy na produkcję (poza pakietem): <span id="budzet-val">0 zł</span></label>
+            <input type="range" class="form-slider" id="budzet" min="0" max="2000" step="100" value="0"
+              oninput="document.getElementById('budzet-val').textContent = this.value + ' zł'">
+            <div class="slider-labels"><span>0 zł</span><span>500 zł</span><span>1 000 zł</span><span>2 000+ zł</span></div>
+          </div>
+
+          <div class="form-group full">
+            <label>Coś jeszcze, co chcesz nam powiedzieć?</label>
+            <textarea rows="3" placeholder="Dowolne dodatkowe informacje, pytania, specjalne życzenia..."></textarea>
+          </div>
+
+          <div class="form-gwarancja">
+            <div class="gwarancja-icon">🛡️</div>
+            <div class="gwarancja-text">
+              <strong>Gwarancja satysfakcji:</strong> Jeśli po pierwszym demo uznasz, że nie trafiamy w sedno — zwrócimy 100% płatności. Nasze dotychczasowe statystyki: 0 zwrotów.
+            </div>
+          </div>
+
+          <div class="form-submit">
+            <button type="submit" class="btn-submit">WYŚLIJ ZAMÓWIENIE → BEZPŁATNA KONSULTACJA W 24H</button>
+            <p class="form-note">Po przesłaniu formularza skontaktujemy się z Tobą w ciągu 24 godzin w celu omówienia szczegółów. Płatność dopiero po zaakceptowaniu briefa.</p>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <p class="section-eyebrow">Często Zadawane Pytania</p>
+    <h2 class="section-title">Masz pytania? Mamy odpowiedzi</h2>
+    <hr class="divider">
+    <div class="faq-list">
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Ile czasu trwa realizacja?</button>
+        <div class="faq-a">Standardowo: demo tekstu w 48–72 godziny od akceptacji briefa, pełny utwór w 7–14 dni roboczych. Realizacja ekspresowa dostępna za dopłatą — 24 godziny lub 48 godzin od zamówienia.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Czym różni się Wasze podejście od AI?</button>
+        <div class="faq-a">AI generuje piosenki na podstawie danych statystycznych. My prowadzimy konsultację, zadajemy pytania, rozumiemy kontekst emocjonalny i tworzymy coś jedynego w swoim rodzaju. Każdy utwór to efekt prawdziwej rozmowy z człowiekiem — nie wypełnionego szablonu.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Co jeśli tekst mi nie odpowiada?</button>
+        <div class="faq-a">Każdy pakiet zawiera minimum 1 korektę tekstu w cenie. Pakiety Srebrny i wyżej — więcej korekt. Jeśli po konsultacji i korekcie nadal nie jesteś zadowolony, zwrócimy pieniądze. Nasz cel jest jeden: musisz poczuć, że to Twoja piosenka.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Czy mogę dostarczyć swoją melodię?</button>
+        <div class="faq-a">Tak! Możesz przesłać nagranie (nawet zaśpiewane na telefonie), nuty lub opis melodii. Dopiszemy tekst do Twojej melodii lub zmodyfikujemy Twoją melodię pod nasz tekst.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Czy dostaję prawa autorskie do piosenki?</button>
+        <div class="faq-a">Pakiety Złoty i Platynowy zawierają przeniesienie majątkowych praw autorskich. W niższych pakietach otrzymujesz licencję na użytek prywatny. Komercyjne wykorzystanie — do ustalenia indywidualnie.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Czy mogę zamówić voucher jako prezent?</button>
+        <div class="faq-a">Oczywiście! Voucher podarunkowy możesz zamówić na dowolny pakiet. Przesyłamy elegancki PDF z opisem usługi lub możemy zorganizować fizyczny voucher do odbioru. Ważność: 12 miesięcy od zakupu.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Jakie gatunki muzyczne robicie?</button>
+        <div class="faq-a">Pop, ballada, folk, rock, jazz, bossa nova, hip-hop, muzyka klasyczna, country, reggae. Jeśli masz w głowie konkretną muzykę — podaj nam przykład (link do YouTube lub Spotify) i postaramy się trafić w ten klimat.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Jak wygląda proces płatności?</button>
+        <div class="faq-a">Płatność w dwóch ratach: 40% po akceptacji briefa (przed rozpoczęciem), 60% po dostarczeniu finalnego demo. Akceptujemy przelewy bankowe, PayPal, Blik. Faktury VAT wystawiamy na życzenie.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Muzyczna Kreacja Słów</div>
+  <p class="footer-tagline">Twój Muzyczny Azyl — Spersonalizowane Utwory na Zamówienie</p>
+  <div class="footer-links">
+    <a href="#manifesto">Filozofia</a>
+    <a href="#utwory">Przykłady</a>
+    <a href="#cennik">Pakiety</a>
+    <a href="#o-mnie">O mnie</a>
+    <a href="#formularz">Zamów utwór</a>
+    <a href="mailto:kontakt@muzycznakreacja.pl">kontakt@muzycznakreacja.pl</a>
+  </div>
+  <p class="footer-copy">© 2025 Muzyczna Kreacja Słów · Wszelkie prawa zastrzeżone · Polityka prywatności</p>
+</footer>
+
+<!-- STICKY CTA -->
+<div class="sticky-cta" id="sticky-cta">
+  <p class="sticky-cta-text">Gotowy na <strong>swoją wyjątkową piosenkę?</strong> Bezpłatna konsultacja w 24h.</p>
+  <a href="#formularz" class="btn-primary" style="white-space:nowrap; margin-left:1rem;">Zamów teraz</a>
+</div>
+
+<script>
+function showSong(id) {
+  document.querySelectorAll('.song-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.song-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('song-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleFaq(btn) {
+  const a = btn.nextElementSibling;
+  const isOpen = a.classList.contains('open');
+  document.querySelectorAll('.faq-a').forEach(x => x.classList.remove('open'));
+  document.querySelectorAll('.faq-q').forEach(x => x.classList.remove('open'));
+  if (!isOpen) { a.classList.add('open'); btn.classList.add('open'); }
+}
+
+window.addEventListener('scroll', () => {
+  const sticky = document.getElementById('sticky-cta');
+  if (window.scrollY > 600) sticky.classList.add('visible');
+  else sticky.classList.remove('visible');
+});
+
+document.getElementById('zamowienie-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  alert('✅ Dziękujemy za zamówienie! Skontaktujemy się z Tobą w ciągu 24 godzin.');
+});
+</script>
+</body>
+</html>

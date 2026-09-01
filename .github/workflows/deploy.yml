@@ -1,0 +1,72 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH to VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /srv/hbrl/Metadata-Engine
+
+            # Backup existing env if present
+            if [ -f backend/.env ]; then
+              cp backend/.env backend/.env.backup.$(date +%F-%H%M%S)
+            fi
+
+            # Write backend/.env from GitHub Secrets (no secrets in repo)
+            cat > backend/.env << 'EOF'
+GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}
+DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+XAI_API_KEY=${{ secrets.XAI_API_KEY }}
+
+PINATA_JWT=${{ secrets.PINATA_JWT }}
+PINATA_GATEWAY=${{ secrets.PINATA_GATEWAY }}
+
+SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}
+SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }}
+LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}
+
+DISCOGS_API_KEY=${{ secrets.DISCOGS_API_KEY }}
+DISCOGS_SECRETS=${{ secrets.DISCOGS_SECRETS }}
+ACOUSTID_API=${{ secrets.ACOUSTID_API }}
+ACOUSTID_API_TOKEN=${{ secrets.ACOUSTID_API_TOKEN }}
+
+LEMONSQUEEZY_WEBHOOK_SECRET=${{ secrets.LEMONSQUEEZY_WEBHOOK_SECRET }}
+VITE_LEMONSQUEEZY_WEBHOOK_SECRET=${{ secrets.VITE_LEMONSQUEEZY_WEBHOOK_SECRET }}
+
+SECRET_KEY=${{ secrets.SECRET_KEY }}
+API_CLIENT_ID=${{ secrets.API_CLIENT_ID }}
+API_CLIENT_SECRET=${{ secrets.API_CLIENT_SECRET }}
+
+DATABASE_URL=${{ secrets.DATABASE_URL }}
+EOF
+
+            # Pull latest code and rebuild containers
+            git pull origin main
+
+            # Use docker compose v2 if present; fallback to docker-compose
+            if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+              docker compose down
+              docker compose up -d --build
+            elif command -v docker-compose >/dev/null 2>&1; then
+              docker-compose down
+              docker-compose up -d --build
+            else
+              echo "Docker Compose not found on VPS" >&2
+              exit 1
+            fi
