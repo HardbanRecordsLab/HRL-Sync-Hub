@@ -1,6 +1,21 @@
 const { google }          = require("googleapis");
+const jwt                 = require("jsonwebtoken");
 const { logger }          = require("../utils/logger");
 const { queryOne, query } = require("../db/pool");
+
+// The OAuth `state` round-trips through Google, so sign it to stop anyone
+// pinning another user's Drive account onto their session.
+function signState(userId) {
+  return jwt.sign({ uid: userId, k: "drive_oauth" }, process.env.JWT_SECRET, { expiresIn: "15m" });
+}
+function verifyState(state) {
+  try {
+    const p = jwt.verify(state, process.env.JWT_SECRET);
+    return p.k === "drive_oauth" ? p.uid : null;
+  } catch {
+    return null;
+  }
+}
 
 class DriveService {
   constructor() {
@@ -33,7 +48,7 @@ class DriveService {
     return c.generateAuthUrl({
       access_type: "offline",
       prompt:      "consent",
-      state:       userId,
+      state:       signState(userId),
       scope: [
         "https://www.googleapis.com/auth/drive.readonly",
         "https://www.googleapis.com/auth/drive.file",
@@ -46,6 +61,10 @@ class DriveService {
     const c = this.getOAuth2Client();
     const { tokens } = await c.getToken(code);
     return tokens;
+  }
+
+  verifyState(state) {
+    return verifyState(state);
   }
 
   async saveTokens(userId, tokens) {

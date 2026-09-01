@@ -1,112 +1,60 @@
 const jwt = require("jsonwebtoken");
 const { queryOne } = require("../db/pool");
 
-const USE_SUPABASE = process.env.USE_SUPABASE_AUTH !== "false";
+// index.js validates JWT_SECRET at boot; read lazily so tooling that only needs
+// other exports (migrations, seeds) can still require this file.
+const JWT_SECRET = process.env.JWT_SECRET;
 
-let supabase;
-if (USE_SUPABASE) {
-  const { createClient } = require("@supabase/supabase-js");
-  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+/** Pull a bearer token from the Authorization header or ?token= (used by <audio> streaming). */
+function extractToken(req) {
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) return header.slice(7);
+  if (req.query && typeof req.query.token === "string") return req.query.token;
+  return null;
 }
 
-const authMiddleware = async (req, res, next) => {
-  const header = req.headers.authorization;
-  let token = null;
-  if (header?.startsWith("Bearer ")) {
-    token = header.slice(7);
-  } else if (req.query.token) {
-    token = req.query.token;
-  }
+async function loadUser(token) {
+  const payload = jwt.verify(token, JWT_SECRET);
+  const userId = payload.sub || payload.userId;
+  if (!userId) return null;
+  return queryOne("SELECT * FROM users WHERE id = $1", [userId]);
+}
 
-  if (!token) {
-    return res.status(401).json({ error: "Missing Authorization" });
-  }
+/** Hard auth — 401 if no valid token / unknown user. */
+const authMiddleware = async (req, res, next) => {
+  const token = extractToken(req);
+  if (!token) return res.status(401).json({ error: "Missing Authorization" });
 
   try {
-    if (USE_SUPABASE) {
-      // Verify via Supabase (returns Supabase user)
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (error || !user) return res.status(401).json({ error: "Invalid token" });
-
-      // Look up / upsert in our own users table
-      let dbUser = await queryOne("SELECT * FROM users WHERE id = $1", [user.id]);
-      if (!dbUser) {
-        dbUser = await queryOne(
-          `INSERT INTO users (id, email, full_name) VALUES ($1, $2, $3)
-           ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email RETURNING *`,
-          [user.id, user.email, user.user_metadata?.full_name ?? null]
-        );
-      }
-      req.user = dbUser;
-      req.userId = dbUser.id;
-    } else {
-      // Pure JWT mode
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Handle WordPress JWT structure (data object)
-      const wpId = payload.data?.user_id || payload.data?.wp_user_id;
-      const email = payload.data?.user_email || payload.email;
-      const sub = payload.sub;
-
-      let dbUser = null;
-
-      if (wpId) {
-        // Find by WordPress ID
-        dbUser = await queryOne("SELECT * FROM users WHERE wp_user_id = $1", [wpId]);
-      } else if (sub) {
-        // Find by UUID sub
-        dbUser = await queryOne("SELECT * FROM users WHERE id = $1", [sub]);
-      }
-
-      // Auto-provision user if they exist in JWT but not in DB
-      if (!dbUser && (wpId || email)) {
-        dbUser = await queryOne(
-          `INSERT INTO users (email, wp_user_id, full_name, tier) 
-           VALUES ($1, $2, $3, $4) 
-           ON CONFLICT (wp_user_id) DO UPDATE SET email = EXCLUDED.email 
-           RETURNING *`,
-          [email, wpId, payload.data?.user_login || null, payload.data?.tier || 'free']
-        );
-      }
-
-      if (!dbUser) return res.status(401).json({ error: "User not found or provision failed" });
-      
-      req.user = dbUser;
-      req.userId = dbUser.id;
-    }
+    const user = await loadUser(token);
+    if (!user) return res.status(401).json({ error: "Invalid token" });
+    req.user = user;
+    req.userId = user.id;
     next();
   } catch (err) {
-    console.error("Auth Middleware Error:", err);
     return res.status(401).json({ error: "Authentication failed" });
   }
 };
 
-// Optional — doesn't 401, just populates req.user if valid
+/** Soft auth — never 401, just populates req.user when a valid token is present. */
 const optionalAuth = async (req, res, next) => {
-  try {
-    const header = req.headers.authorization;
-    if (header?.startsWith("Bearer ")) {
-      const token = header.slice(7);
-      if (USE_SUPABASE && supabase) {
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (user) {
-          req.user = await queryOne("SELECT * FROM users WHERE id = $1", [user.id]);
-          req.userId = user.id;
-        }
-      } else {
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await queryOne("SELECT * FROM users WHERE id = $1", [payload.sub]);
-        if (req.user) req.userId = req.user.id;
+  const token = extractToken(req);
+  if (token) {
+    try {
+      const user = await loadUser(token);
+      if (user) {
+        req.user = user;
+        req.userId = user.id;
       }
+    } catch {
+      /* ignore — anonymous request */
     }
-  } catch { }
+  }
   next();
 };
 
 const requireAdmin = (req, res, next) => {
-  if (!req.user?.is_superuser) return res.status(403).json({ error: "Admin required" });
+  if (!req.user?.is_admin) return res.status(403).json({ error: "Admin required" });
   next();
 };
 

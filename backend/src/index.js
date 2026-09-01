@@ -6,14 +6,25 @@ const cors = require("cors");
 const morgan = require("morgan");
 const compression = require("compression");
 const helmet = require("helmet");
+const path = require("path");
+const fs = require("fs");
 
 const { logger } = require("./utils/logger");
-const { testConnection } = require("./db/pool");
+const { testConnection, pool } = require("./db/pool");
+const migrate = require("./db/migrate");
 const errorHandler = require("./middleware/errorHandler");
 const authMiddleware = require("./middleware/auth");
 const { getHelmetConfig, RateLimitManager } = require("./middleware/security");
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// ── Fail fast on missing critical config ──────────────────────────────────────
+for (const key of ["JWT_SECRET", "DATABASE_URL"]) {
+  if (!process.env[key]) {
+    logger.error(`Missing required env var: ${key}`);
+    process.exit(1);
+  }
+}
+
+// ── Routes ───────────────────────────────────────────────────────────────────
 const authRoutes = require("./routes/auth");
 const tracksRoutes = require("./routes/tracks");
 const lyricsRoutes = require("./routes/lyrics");
@@ -27,116 +38,95 @@ const businessRoutes = require("./routes/business");
 const aiService = require("./services/aiService");
 
 const app = express();
-
 app.set("trust proxy", 1);
 
-// ── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet(getHelmetConfig()));
-
 app.use(compression());
-app.use(morgan("combined", { stream: { write: m => logger.info(m.trim()) } }));
+app.use(morgan("combined", { stream: { write: (m) => logger.info(m.trim()) } }));
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
+// ── CORS ─────────────────────────────────────────────────────────────────────
+const DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8080"];
 const allowedOrigins = [
-  "https://hardbanrecordslab.online",
-  "https://app-user-hub.hardbanrecordslab.online",
-  "https://app-writemuse.hardbanrecordslab.online",
-  "https://app-masterpro.hardbanrecordslab.online",
-  "https://app-metadata.hardbanrecordslab.online",
-  "https://app-course-hub.hardbanrecordslab.online",
-  "https://app-community.hardbanrecordslab.online",
-  "https://app-sync.hardbanrecordslab.online",
-  "https://app.hrl-sync-hub.hardbanrecordslab.online",
-  "https://app-webook.hardbanrecordslab.online",
-  "https://app-omnipost.hardbanrecordslab.online",
-  "http://localhost:3000",
-  "http://localhost:5173",
+  ...new Set([
+    ...DEFAULT_ORIGINS,
+    ...(process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  ]),
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
-}));
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+  })
+);
 
-// ── Rate limits ───────────────────────────────────────────────────────────────
+// ── Rate limits ──────────────────────────────────────────────────────────────
 app.use("/api/", RateLimitManager.getGlobalLimiter());
 app.use("/api/auth/login", RateLimitManager.getAuthLimiter());
 app.use("/api/auth/register", RateLimitManager.getAuthLimiter());
 
-// ── Parsers ───────────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// ── Static Files ──────────────────────────────────────────────────────────────
-const path = require("path");
-const fs = require("fs");
+// ── Static ───────────────────────────────────────────────────────────────────
 const uploadsDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
 app.use("/uploads", express.static(uploadsDir));
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
-// ── Health ────────────────────────────────────────────────────────────────────
-app.get("/health", async (req, res) => {
-  const { pool } = require("./db/pool");
+// ── Health ───────────────────────────────────────────────────────────────────
+app.get(["/health", "/api/health"], async (req, res) => {
   let dbOk = false;
-  try { await pool.query("SELECT 1"); dbOk = true; } catch { }
-  res.json({
-    status: "ok",
+  try {
+    await pool.query("SELECT 1");
+    dbOk = true;
+  } catch {
+    /* reported below */
+  }
+  res.status(dbOk ? 200 : 503).json({
+    status: dbOk ? "ok" : "degraded",
     app: "HRL Sync API",
-    version: "2.0.0-premium",
+    version: require("../package.json").version,
     db: dbOk ? "connected" : "error",
     drive: !!process.env.GOOGLE_CLIENT_ID,
     ts: new Date().toISOString(),
   });
 });
 
-// Standardized Health for Unified HRL
-app.get("/api/health", (req, res) => res.redirect("/health"));
-
-// Standardized Auth for Unified HRL
-app.get("/api/auth", async (req, res) => {
-  const email = req.query.email;
-  const ACCESS_MANAGER_URL = process.env.ACCESS_MANAGER_URL || "http://hrl-webhook-hub-backend:9107";
-  if (!email) return res.status(400).json({ error: "email required" });
-  
-  try {
-    const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-    const response = await fetch(`${ACCESS_MANAGER_URL}/api/auth/profile?email=${email}`);
-    if (!response.ok) return res.status(response.status).json({ error: "Auth Service Error" });
-    const data = await response.json();
-    res.json(data);
-  } catch (e) {
-    res.status(503).json({ error: "Access Manager Connection Error" });
-  }
-});
-
-// ── API Routes ────────────────────────────────────────────────────────────────
+// ── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/business", businessRoutes);
-app.use("/api/tracks", (req, res, next) => {
-  if (req.path.startsWith("/stream/") && req.query.shareToken) return next();
-  return authMiddleware(req, res, next);
-}, tracksRoutes);
-app.use("/api/lyrics", lyricsRoutes);
+
+// Track streaming is reachable with a share token (no login); everything else needs auth.
+app.use(
+  "/api/tracks",
+  (req, res, next) => {
+    if (req.path.startsWith("/stream/") && req.query.shareToken) return next();
+    return authMiddleware(req, res, next);
+  },
+  tracksRoutes
+);
+
+app.use("/api/lyrics", lyricsRoutes); // route-level optionalAuth / auth
 app.use("/api/drive", authMiddleware, driveRoutes);
-app.use("/api/playlists", playlistsRoutes);
-app.use("/api/analytics", analyticsRoutes);
+app.use("/api/playlists", playlistsRoutes); // public share route + router.use(auth)
+app.use("/api/analytics", analyticsRoutes); // public event route + router.use(auth)
 app.use("/api/embed", embedRoutes);
 app.use("/api/contacts", authMiddleware, contactsRoutes);
 app.use("/api/projects", authMiddleware, projectsRoutes);
 
-// AI Insight Route
 app.post("/api/ai/analyze-track/:id", authMiddleware, async (req, res) => {
-  const track = await require("./db/pool").queryOne("SELECT * FROM tracks WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
+  const track = await pool
+    .query("SELECT * FROM tracks WHERE id=$1 AND user_id=$2", [req.params.id, req.userId])
+    .then((r) => r.rows[0]);
   if (!track) return res.status(404).json({ error: "Track not found" });
   const analysis = await aiService.detectMoodAndGenre(track);
   res.json(analysis);
@@ -145,25 +135,20 @@ app.post("/api/ai/analyze-track/:id", authMiddleware, async (req, res) => {
 app.use("*", (req, res) => res.status(404).json({ error: "Not found" }));
 app.use(errorHandler);
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Boot ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
+
 (async () => {
+  await testConnection();
   try {
-    await testConnection(); 
-    
-    // Auto-run migrations
-    const migrateCore = require("./db/migrate_core");
-    const migrateBusiness = require("./db/migrate_business");
-    await migrateCore();
-    await migrateBusiness();
-    
-    app.listen(PORT, "0.0.0.0", () => {
-      logger.info(`🎵 HRL Sync Hub PREMIUM API — port ${PORT} | env: ${process.env.NODE_ENV}`);
-    });
+    await migrate();
   } catch (err) {
-    logger.error("Failed to start HRL Sync API:", err.message);
-    process.exit(1);
+    logger.error(`Schema migration failed — starting anyway, /health will report degraded: ${err.message}`);
   }
+  app.listen(PORT, "0.0.0.0", () => {
+    logger.info(`🎵 HRL Sync API — port ${PORT} | env: ${process.env.NODE_ENV || "development"}`);
+    logger.info(`   CORS origins: ${allowedOrigins.join(", ")}`);
+  });
 })();
 
 module.exports = app;
