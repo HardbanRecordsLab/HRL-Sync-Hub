@@ -16,7 +16,14 @@ process.env.FRONTEND_URL = "http://localhost:8080";
 
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const crypto = require("crypto");
+
+// Local-dir storage driver pointed at a throwaway temp dir.
+const STORE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "hrl-e2e-store-"));
+process.env.STORAGE_DRIVER = "fs";
+process.env.STORAGE_FS_DIR = STORE_DIR;
+process.on("exit", () => fs.rmSync(STORE_DIR, { recursive: true, force: true }));
 const assert = require("assert");
 const bcrypt = require("bcryptjs");
 const { newDb, DataType } = require("pg-mem");
@@ -199,22 +206,29 @@ async function check(name, fn) {
     assert.strictEqual(r.headers["content-range"], `bytes 0-99/${fakeAudio.length}`);
   });
 
-  await check("GET /api/tracks/storage reports the uploaded bytes", async () => {
+  await check("GET /api/tracks/storage reports driver + uploaded bytes", async () => {
     const r = await request(app).get("/api/tracks/storage").set("Authorization", `Bearer ${adminToken}`);
     assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    assert.strictEqual(r.body.driver, "fs");
     assert(r.body.localFiles >= 1, "counts the file");
     assert(r.body.localBytes > 0, "sums the bytes");
   });
 
-  await check("deleting a local track removes its file", async () => {
-    const before = await pool.query("SELECT local_file_path FROM tracks WHERE id=$1", [localTrackId]);
-    const filePath = require("path").join(__dirname, "../uploads", before.rows[0].local_file_path);
-    assert(fs.existsSync(filePath), "file exists before delete");
+  await check("uploaded object landed in the store, not the staging dir", async () => {
+    const { rows } = await pool.query("SELECT local_file_path FROM tracks WHERE id=$1", [localTrackId]);
+    const key = rows[0].local_file_path;
+    assert(fs.existsSync(path.join(STORE_DIR, key)), "object in store");
+    assert(!fs.existsSync(path.join(__dirname, "../uploads/.staging", key)), "staging temp cleaned up");
+  });
+
+  await check("deleting a local track removes its object", async () => {
+    const { rows } = await pool.query("SELECT local_file_path FROM tracks WHERE id=$1", [localTrackId]);
+    const objectPath = path.join(STORE_DIR, rows[0].local_file_path);
+    assert(fs.existsSync(objectPath), "object exists before delete");
     const r = await request(app).delete(`/api/tracks/${localTrackId}`).set("Authorization", `Bearer ${adminToken}`);
     assert.strictEqual(r.status, 200);
-    // unlink is fire-and-forget — give it a tick
-    await new Promise((res) => setTimeout(res, 50));
-    assert(!fs.existsSync(filePath), "file gone after delete");
+    await new Promise((res) => setTimeout(res, 50)); // remove() is fire-and-forget
+    assert(!fs.existsSync(objectPath), "object gone after delete");
   });
 
   await check("POST /api/playlists (was a missing endpoint) → 201", async () => {

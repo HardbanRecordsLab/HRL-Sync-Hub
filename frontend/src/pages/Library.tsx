@@ -53,7 +53,7 @@ export default function Library() {
   });
   const tracks = Array.isArray(tracksData) ? tracksData : [];
 
-  const { data: storage } = useQuery<{ localFiles: number; localBytes: number; totalTracks: number; maxUploadBytes: number }>({
+  const { data: storage } = useQuery<{ driver: string; bucket: string; localFiles: number; localBytes: number; totalTracks: number; maxUploadBytes: number }>({
     queryKey: ["tracks-storage"],
     queryFn: () => api.get("/api/tracks/storage"),
   });
@@ -125,7 +125,7 @@ export default function Library() {
             <h1 className="hrl-title text-5xl mb-1">LIBRARY</h1>
             <p className="hrl-label text-muted-foreground">
               {tracks.length} track{tracks.length !== 1 ? "s" : ""}
-              {storage ? ` · ${storage.localFiles} on VPS · ${fmtBytes(storage.localBytes)}` : ""}
+              {storage ? ` · ${storage.localFiles} in ${storage.driver === "s3" ? "MinIO" : "local store"} · ${fmtBytes(storage.localBytes)}` : ""}
             </p>
           </div>
           <div className="flex gap-2">

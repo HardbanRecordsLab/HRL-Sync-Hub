@@ -12,6 +12,7 @@ for (const key of ["JWT_SECRET", "DATABASE_URL"]) {
 
 const { testConnection } = require("./db/pool");
 const migrate = require("./db/migrate");
+const objectStore = require("./services/storage");
 const { app, allowedOrigins } = require("./app");
 
 const PORT = process.env.PORT || 3001;
@@ -22,6 +23,12 @@ const PORT = process.env.PORT || 3001;
     await migrate();
   } catch (err) {
     logger.error(`Schema migration failed — starting anyway, /health will report degraded: ${err.message}`);
+  }
+  try {
+    await objectStore.ensureReady();
+    logger.info(`📦 Object storage ready (driver: ${objectStore.driver}, bucket: ${objectStore.bucket})`);
+  } catch (err) {
+    logger.error(`Object storage not reachable (driver: ${objectStore.driver}): ${err.message}`);
   }
   app.listen(PORT, "0.0.0.0", () => {
     logger.info(`🎵 HRL Sync API — port ${PORT} | env: ${process.env.NODE_ENV || "development"}`);

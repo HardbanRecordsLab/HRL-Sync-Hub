@@ -1,18 +1,24 @@
 # HRL Sync — Wdrożenie
 
 ```
-Vercel (frontend)                 VPS / Docker (API + Postgres)         Google Drive
-React + Vite                      Node 20 + Express                     ────────────
-app.hrl-sync-hub…      ──HTTPS──▶ PostgreSQL 16                         pliki audio
-                                  sync-api.hardbanrecordslab.online     Google Docs (teksty)
-                                          ▲
-                                  WordPress plugin  [hrlsync token="…"]
+Vercel (frontend)                          VPS / Docker
+React + Vite                    ┌─────────────────────────────────────┐
+hrl-sync-hub.hardbanrecordslab  │  API (Node 20 + Express) :9110       │
+        │  ──────HTTPS──────────▶│    hrl-sync.hardbanrecordslab.online │
+        │                        │  PostgreSQL 16   (kontener, wewn.)   │
+        │                        │  MinIO           (kontener, wewn.)   │  ← magazyn audio
+        │                        └─────────────────────────────────────┘
+        │                                     ▲
+        │                        WordPress plugin  [hrlsync token="…"]   (opcjonalnie)
+        │                        Google Drive / Docs                     (opcjonalny import)
 ```
 
-**Zasada:** Google Drive = magazyn plików audio. API trzyma tylko metadane (Postgres)
-i proxy-streamuje audio do przeglądarki. Żaden plik audio nie jest kopiowany na serwer.
+**Magazyn audio:** MinIO (S3-compatible) w kontenerze na VPS. API jest jedyną bramką —
+proxy-streamuje bajty przez `/api/tracks/stream/:id` (Range/seek), nigdy nie wystawia
+obiektów publicznie. `STORAGE_DRIVER=fs` przełącza na lokalny katalog (tylko dev).
+Google Drive jest opcjonalnym źródłem importu.
 
-Auth: własny JWT (email + hasło). Konta zakłada administrator — brak publicznej rejestracji.
+**Auth:** własny JWT (email + hasło). Konta zakłada administrator — brak publicznej rejestracji.
 
 ---
 
@@ -33,46 +39,52 @@ Auth: własny JWT (email + hasło). Konta zakłada administrator — brak public
 
 ## 2. Backend — Docker (zalecane)
 
-Wymaga tylko Dockera na VPS.
+Wymaga tylko Dockera na VPS. Stack: API + PostgreSQL + MinIO.
 
 ```bash
-git clone <repo> /srv/hrl-sync && cd /srv/hrl-sync
-cp backend/.env.example backend/.env
-nano backend/.env         # ↓ patrz "Wymagane zmienne"
+git clone git@github.com:HardbanRecordsLab/HRL-Sync-Hub.git /srv/hrl-sync
+cd /srv/hrl-sync
+cp .env.example .env
+nano .env                 # ↓ patrz "Wymagane zmienne"
+echo 'API_PORT=9110' >> .env
 docker compose up -d --build
 docker compose exec api npm run db:seed   # tworzy konto admina (ADMIN_EMAIL / ADMIN_PASSWORD)
-curl localhost:3001/health                # {"status":"ok","db":"connected"}
+curl localhost:9110/health                # {"status":"ok","db":"connected"}
 ```
 
-Schemat bazy stosuje się **automatycznie przy każdym starcie** (`src/db/schema.sql`,
-idempotentny). Nie trzeba nic ładować ręcznie.
+Schemat bazy stosuje się **automatycznie przy każdym starcie** (`backend/src/db/schema.sql`,
+idempotentny). Bucket MinIO (`hrl-audio`) tworzy się automatycznie.
 
-### Wymagane zmienne (`backend/.env`)
+### Wymagane zmienne (root `.env`)
 
 ```bash
 JWT_SECRET=            # openssl rand -base64 48   ← OBOWIĄZKOWE
-ADMIN_EMAIL=you@label.com
+ADMIN_EMAIL=hardbanrecordslab.pl@gmail.com
 ADMIN_PASSWORD=        # min. 8 znaków, użyte tylko przez `npm run db:seed`
-FRONTEND_URL=https://app.hrl-sync-hub.hardbanrecordslab.online
-ALLOWED_ORIGINS=https://app.hrl-sync-hub.hardbanrecordslab.online
-API_URL=https://sync-api.hardbanrecordslab.online
-GOOGLE_CLIENT_ID=...
+POSTGRES_PASSWORD=     # dowolne mocne
+S3_ACCESS_KEY=hrl-minio
+S3_SECRET_KEY=         # min. 8 znaków — root MinIO
+API_PORT=9110
+API_URL=https://hrl-sync.hardbanrecordslab.online
+FRONTEND_URL=https://hrl-sync-hub.hardbanrecordslab.online
+ALLOWED_ORIGINS=https://hrl-sync-hub.hardbanrecordslab.online
+GOOGLE_CLIENT_ID=...          # opcjonalne (import z Drive + teksty z Docs)
 GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=https://sync-api.hardbanrecordslab.online/api/auth/google/callback
-# opcjonalne: GROQ_API_KEY, GEMINI_API_KEY (AI), SMTP_* (maile)
+GOOGLE_REDIRECT_URI=https://hrl-sync.hardbanrecordslab.online/api/auth/google/callback
+# opcjonalne: GROQ_API_KEY, GEMINI_API_KEY (AI-tagi), SMTP_* (maile)
 ```
 
-`DATABASE_URL`, `PORT`, `NODE_ENV` ustawia `docker-compose.yml` — nie ruszaj ich w `.env`.
-Hasło Postgresa: `POSTGRES_PASSWORD` w root `.env` lub shellu (domyślnie `hrlsync_dev`,
-baza nie jest wystawiona na host).
+`DATABASE_URL`, `STORAGE_DRIVER`, `S3_ENDPOINT`, `PORT`, `NODE_ENV` ustawia `docker-compose.yml`
+(sieć wewnętrzna) — nie dodawaj ich do `.env`. Postgres i MinIO **nie są wystawione na host**.
 
 ### Nginx + TLS przed kontenerem
 
 ```bash
-cp docs/nginx.conf /etc/nginx/sites-available/hrlsync-api
-ln -s /etc/nginx/sites-available/hrlsync-api /etc/nginx/sites-enabled/
-certbot --nginx -d sync-api.hardbanrecordslab.online
+sed -i 's/sync-api.hardbanrecordslab.online/hrl-sync.hardbanrecordslab.online/g; s#127.0.0.1:3001#127.0.0.1:9110#g' docs/nginx.conf
+cp docs/nginx.conf /etc/nginx/sites-available/hrl-sync
+ln -s /etc/nginx/sites-available/hrl-sync /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
+certbot --nginx -d hrl-sync.hardbanrecordslab.online
 ```
 
 ---
@@ -109,13 +121,14 @@ Sekrety repo: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_KEY`, `DEPLOY_DIR`.
 ## 6. Przepływ audio
 
 ```
-1. /drive → Connect Google Drive (OAuth, callback: /api/auth/google/callback)
-2. Przeglądasz pliki → Import to Library  (zapisuje tylko metadane + Drive file ID)
-3. Library → Play → GET /api/tracks/stream/{trackId}?token=JWT
-4. API weryfikuje JWT/ownership → odświeża token Drive jeśli trzeba →
-   pipe'uje stream z Drive do przeglądarki (obsługa Range = seek)
-5. Playlisty (Pitches) → Share link → publiczne /share/{token}
+1. Library → Upload audio  → POST /api/tracks/upload (multipart, tylko admin)
+   → plik staging → MinIO (bucket hrl-audio) → wiersz w tracks (source='local')
+2. Library → Play → GET /api/tracks/stream/{trackId}?token=JWT
+   → API weryfikuje JWT/ownership → GetObject z MinIO (Range = seek) → przeglądarka
+3. Playlisty (Pitches) → Share link → publiczne /share/{token}
    odtwarzanie: /api/tracks/stream/{trackId}?shareToken={token}
+4. (opcjonalnie) /drive → Connect Google Drive → Import → tracks (source='google_drive')
+   stream: API proxy-uje z Drive kontem właściciela
 ```
 
 ---
@@ -124,7 +137,11 @@ Sekrety repo: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_KEY`, `DEPLOY_DIR`.
 
 ```bash
 docker compose logs -f api
-docker compose exec api npm run db:seed          # reset hasła admina
-docker compose exec db pg_dump -U hrlsync hrlsync > backup_$(date +%F).sql
+docker compose exec api npm run db:seed                       # reset hasła admina
+docker compose exec db pg_dump -U hrlsync hrlsync > db_$(date +%F).sql
+docker compose exec minio mc mirror --overwrite local/hrl-audio /data-backup   # backup audio
 docker compose restart api
 ```
+
+MinIO console: odkomentuj `ports: 127.0.0.1:9001:9001` w `docker-compose.yml`,
+potem `http://127.0.0.1:9001` (login = `S3_ACCESS_KEY` / `S3_SECRET_KEY`).

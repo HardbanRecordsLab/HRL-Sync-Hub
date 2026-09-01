@@ -3,6 +3,7 @@ const router = express.Router();
 const { query, queryOne, queryAll } = require("../db/pool");
 const { logger } = require("../utils/logger");
 const drive = require("../services/googleDrive");
+const objectStore = require("../services/storage");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -10,19 +11,16 @@ const { parseFile } = require("music-metadata");
 
 const { requireAdmin } = require("../middleware/auth");
 
-// ── VPS-local audio storage ──────────────────────────────────────────────────
-const UPLOAD_DIR = path.join(__dirname, "../../uploads");
+// ── Library audio storage (MinIO / S3 via services/storage.js) ───────────────
+// Uploads land in a temp dir, then stream into the object store; the DB column
+// `local_file_path` holds the object key.
+const STAGING_DIR = path.join(__dirname, "../../uploads", ".staging");
 const MAX_UPLOAD_BYTES = (parseInt(process.env.MAX_UPLOAD_MB || "300", 10)) * 1024 * 1024;
-const ALLOWED_UPLOAD_MIME = new Set([
-  "audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave",
-  "audio/flac", "audio/x-flac", "audio/aac", "audio/ogg", "audio/x-m4a",
-  "audio/mp4", "audio/aiff", "audio/x-aiff",
-]);
 
-const storage = multer.diskStorage({
+const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-    cb(null, UPLOAD_DIR);
+    fs.mkdirSync(STAGING_DIR, { recursive: true });
+    cb(null, STAGING_DIR);
   },
   filename: (req, file, cb) => {
     const safe = file.originalname.replace(/[^\w.\- ]+/g, "_").slice(-120);
@@ -30,15 +28,15 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({
-  storage,
+  storage: multerStorage,
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
   fileFilter: (req, file, cb) => {
-    if (ALLOWED_UPLOAD_MIME.has(file.mimetype)) return cb(null, true);
+    if (/^audio\//i.test(file.mimetype) || file.mimetype === "application/ogg") return cb(null, true);
     cb(Object.assign(new Error("Only audio files are allowed"), { status: 400 }));
   },
 });
 
-// GET /api/tracks/storage — how much of the VPS library store is in use
+// GET /api/tracks/storage — how much of the library store is in use
 router.get("/storage", async (req, res) => {
   const row = await queryOne(
     `SELECT COUNT(*) FILTER (WHERE source='local')::int AS local_files,
@@ -48,6 +46,8 @@ router.get("/storage", async (req, res) => {
     [req.userId]
   );
   res.json({
+    driver: objectStore.driver,
+    bucket: objectStore.bucket,
     localFiles: row.local_files,
     localBytes: Number(row.local_bytes),
     totalTracks: row.total_tracks,
@@ -90,17 +90,16 @@ router.get("/stream/:id", async (req, res) => {
   if (!track) return res.status(404).json({ error: "Track not found" });
 
   if (track.source === "local" && track.local_file_path) {
-    // basename() defends against any '../' that might reach local_file_path
-    const fullPath = path.join(UPLOAD_DIR, path.basename(track.local_file_path));
-    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: "File missing on server" });
+    const key = path.basename(track.local_file_path); // defends against any '../'
+    const meta = await objectStore.head(key);
+    if (!meta) return res.status(404).json({ error: "File missing from storage" });
 
-    const size = fs.statSync(fullPath).size;
+    const size = meta.size;
     const type = track.mime_type || "audio/mpeg";
-    const rangeHeader = req.headers.range;
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "private, no-store");
 
-    const m = rangeHeader && /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+    const m = req.headers.range && /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
     if (m) {
       let start = m[1] ? parseInt(m[1], 10) : 0;
       let end = m[2] ? parseInt(m[2], 10) : size - 1;
@@ -114,11 +113,15 @@ router.get("/stream/:id", async (req, res) => {
         "Content-Length": end - start + 1,
         "Content-Type": type,
       });
-      return fs.createReadStream(fullPath, { start, end }).pipe(res);
+      const partial = await objectStore.getStream(key, { start, end });
+      partial.on("error", (e) => { logger.error(`stream ${key}: ${e.message}`); res.destroy(); });
+      return partial.pipe(res);
     }
 
     res.writeHead(200, { "Content-Length": size, "Content-Type": type });
-    return fs.createReadStream(fullPath).pipe(res);
+    const full = await objectStore.getStream(key);
+    full.on("error", (e) => { logger.error(`stream ${key}: ${e.message}`); res.destroy(); });
+    return full.pipe(res);
   }
 
   if (track.source === "google_drive" && track.google_drive_file_id) {
@@ -139,21 +142,21 @@ const uploadSingle = (req, res, next) =>
     return res.status(err.status || 400).json({ error: err.message || "Upload failed" });
   });
 
-// ── POST /api/tracks/upload — VPS-local audio ────────────────────────────────
+// ── POST /api/tracks/upload — audio into the object store (MinIO/S3) ─────────
 router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  const fullPath = req.file.path;
-
-  const cleanup = () => fs.promises.unlink(fullPath).catch(() => {});
+  const tmpPath = req.file.path;
+  const objectKey = req.file.filename; // unique, sanitized
+  const size = req.file.size;
 
   let common = {};
   let format = {};
   try {
-    const meta = await parseFile(fullPath);
+    const meta = await parseFile(tmpPath);
     common = meta.common || {};
     format = meta.format || {};
   } catch (e) {
-    logger.warn(`Metadata parse failed for ${req.file.filename}: ${e.message}`);
+    logger.warn(`Metadata parse failed for ${objectKey}: ${e.message}`);
   }
 
   const num = (v) => (v == null || Number.isNaN(Number(v)) ? null : Math.round(Number(v)));
@@ -164,19 +167,28 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   const key = req.body.key || common.key || null;
   const duration = num(format.duration);
 
+  // Move the staged temp file into the object store (this also deletes the temp file).
+  try {
+    await objectStore.putFile(objectKey, tmpPath, req.file.mimetype);
+  } catch (e) {
+    await fs.promises.unlink(tmpPath).catch(() => {});
+    logger.error(`Object store upload failed: ${e.message}`);
+    return res.status(502).json({ error: "Storage backend unavailable" });
+  }
+
   try {
     const { rows: [track] } = await query(
       `INSERT INTO tracks (user_id, title, artist, composer, file_name, file_size, mime_type,
          local_file_path, source, bpm, key, duration, clearance_status, is_public)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'local',$9,$10,$11,'not_cleared',false)
        RETURNING *`,
-      [req.userId, title, artist, composer, req.file.originalname, req.file.size,
-       req.file.mimetype, req.file.filename, bpm, key, duration]
+      [req.userId, title, artist, composer, req.file.originalname, size,
+       req.file.mimetype, objectKey, bpm, key, duration]
     );
-    logger.info(`Uploaded track ${track.id} (${req.file.filename}, ${req.file.size} bytes)`);
+    logger.info(`Uploaded track ${track.id} → ${objectStore.driver}:${objectKey} (${size} bytes)`);
     res.status(201).json(track);
   } catch (err) {
-    await cleanup(); // don't leave an orphan file if the row didn't save
+    await objectStore.remove(objectKey).catch(() => {}); // no orphan object
     logger.error(`Upload DB insert failed: ${err.message}`);
     res.status(500).json({ error: "Could not save track" });
   }
@@ -323,15 +335,16 @@ router.patch("/:id", async (req, res) => {
   res.json(t);
 });
 
-// ── DELETE /api/tracks/:id (also removes the VPS-local file) ─────────────────
+// ── DELETE /api/tracks/:id (also removes the stored object) ─────────────────
 router.delete("/:id", async (req, res) => {
   const { rows: [track] } = await query(
     "DELETE FROM tracks WHERE id=$1 AND user_id=$2 RETURNING source, local_file_path",
     [req.params.id, req.userId]
   );
   if (track?.source === "local" && track.local_file_path) {
-    const p = path.join(UPLOAD_DIR, path.basename(track.local_file_path));
-    fs.promises.unlink(p).catch((e) => logger.warn(`Could not delete file ${p}: ${e.message}`));
+    objectStore
+      .remove(path.basename(track.local_file_path))
+      .catch((e) => logger.warn(`Could not delete object ${track.local_file_path}: ${e.message}`));
   }
   res.json({ success: true });
 });
