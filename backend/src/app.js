@@ -63,10 +63,12 @@ app.use("/api/auth/register", RateLimitManager.getAuthLimiter());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Uploaded audio is NEVER served statically — it only leaves through the
+// auth/share-gated /api/tracks/stream/:id route.
 const uploadsDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-app.use("/uploads", express.static(uploadsDir));
-app.use("/public", express.static(path.join(__dirname, "../public")));
+const publicDir = path.join(__dirname, "../public");
+if (fs.existsSync(publicDir)) app.use("/public", express.static(publicDir));
 
 // ── Health ───────────────────────────────────────────────────────────────────
 app.get(["/health", "/api/health"], async (req, res) => {

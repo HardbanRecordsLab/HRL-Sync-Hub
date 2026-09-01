@@ -110,8 +110,9 @@ export default function GoogleDrive() {
         </div>
         <h1 className="hrl-title text-4xl mb-3">CONNECT DRIVE</h1>
         <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-          HRL Sync uses Google Drive as its primary audio storage. Connect your Drive to browse, preview,
-          and import tracks directly — no file duplication, just metadata.
+          Optional. The library lives on the VPS — upload audio directly in the Library tab.
+          Connect Google Drive only if you also want to import existing Drive files or sync
+          lyrics from Google Docs (metadata only, no file duplication).
         </p>
         <Button className="hrl-btn-primary px-8 py-3 text-sm" onClick={connectDrive}>
           <HardDrive className="w-3.5 h-3.5 mr-2" /> Connect Google Drive
@@ -131,7 +132,7 @@ export default function GoogleDrive() {
                 <span className="hrl-badge-red flex items-center gap-1"><Check className="w-2.5 h-2.5" /> Connected</span>
               )}
             </div>
-            <p className="hrl-label text-muted-foreground">Primary file storage — audio streamed on demand</p>
+            <p className="hrl-label text-muted-foreground">Optional import source — audio streamed on demand, files stay on Drive</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="hrl-label h-8" onClick={() => refetch()}>

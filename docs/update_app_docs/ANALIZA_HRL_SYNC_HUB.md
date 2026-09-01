@@ -13,7 +13,6 @@ HRL Sync Hub to **aplikacja do zarządzania muzyką i synchronizacją praw**, zb
 ### Obecne Możliwości ✅
 - Zarządzanie ścieżkami (upload, edycja metadanych)
 - Playlisty i sharing
-- Integracja z Google Drive
 - Katalog tekstów piosenek
 - Analytics
 - Kontakty i projekty

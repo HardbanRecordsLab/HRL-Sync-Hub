@@ -58,7 +58,7 @@ export default function Dashboard() {
             <h2 className="hrl-title text-xl">RECENT TRACKS</h2>
           </div>
           {stats?.recentTracks.length === 0 && (
-            <p className="hrl-label text-muted-foreground py-6 text-center">No tracks yet — import from Google Drive</p>
+            <p className="hrl-label text-muted-foreground py-6 text-center">No tracks yet — upload audio in the Library</p>
           )}
           <div className="space-y-2">
             {stats?.recentTracks.map((t, i) => (
@@ -79,10 +79,10 @@ export default function Dashboard() {
         {/* Quick links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in stagger-4">
           {[
-            { href: "/drive",   label: "Import from Drive",   desc: "Sync audio files" },
-            { href: "/library", label: "Browse Library",      desc: "All tracks" },
+            { href: "/library", label: "Upload Audio",        desc: "Add to the VPS library" },
+            { href: "/pitches", label: "Send Pitch",          desc: "Create a playlist" },
             { href: "/lyrics",  label: "Lyrics Catalog",      desc: "Manage lyrics" },
-            { href: "/pitches", label: "Send Pitch",          desc: "Create playlist" },
+            { href: "/drive",   label: "Import from Drive",   desc: "Optional source" },
           ].map(({ href, label, desc }) => (
             <a key={href} href={href} className="hrl-card p-4 block hover:border-red-500/30 transition group">
               <p className="font-medium text-sm group-hover:text-red-400 transition mb-1">{label}</p>

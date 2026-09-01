@@ -8,22 +8,52 @@ const path = require("path");
 const fs = require("fs");
 const { parseFile } = require("music-metadata");
 
+const { requireAdmin } = require("../middleware/auth");
+
+// ── VPS-local audio storage ──────────────────────────────────────────────────
+const UPLOAD_DIR = path.join(__dirname, "../../uploads");
+const MAX_UPLOAD_BYTES = (parseInt(process.env.MAX_UPLOAD_MB || "300", 10)) * 1024 * 1024;
+const ALLOWED_UPLOAD_MIME = new Set([
+  "audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave",
+  "audio/flac", "audio/x-flac", "audio/aac", "audio/ogg", "audio/x-m4a",
+  "audio/mp4", "audio/aiff", "audio/x-aiff",
+]);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "../../uploads");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+    if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1E9);
-    cb(null, unique + "-" + file.originalname);
-  }
+    const safe = file.originalname.replace(/[^\w.\- ]+/g, "_").slice(-120);
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safe}`);
+  },
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_UPLOAD_MIME.has(file.mimetype)) return cb(null, true);
+    cb(Object.assign(new Error("Only audio files are allowed"), { status: 400 }));
+  },
 });
-const { requireAdmin } = require("../middleware/auth");
+
+// GET /api/tracks/storage — how much of the VPS library store is in use
+router.get("/storage", async (req, res) => {
+  const row = await queryOne(
+    `SELECT COUNT(*) FILTER (WHERE source='local')::int AS local_files,
+            COALESCE(SUM(file_size) FILTER (WHERE source='local'),0)::bigint AS local_bytes,
+            COUNT(*)::int AS total_tracks
+     FROM tracks WHERE user_id = $1`,
+    [req.userId]
+  );
+  res.json({
+    localFiles: row.local_files,
+    localBytes: Number(row.local_bytes),
+    totalTracks: row.total_tracks,
+    maxUploadBytes: MAX_UPLOAD_BYTES,
+  });
+});
 
 // ── Streaming / Download ──────────────────────────────────────────────────
 router.get("/stream/:id", async (req, res) => {
@@ -60,84 +90,95 @@ router.get("/stream/:id", async (req, res) => {
   if (!track) return res.status(404).json({ error: "Track not found" });
 
   if (track.source === "local" && track.local_file_path) {
-    const fullPath = path.join(__dirname, "../../uploads", track.local_file_path);
+    // basename() defends against any '../' that might reach local_file_path
+    const fullPath = path.join(UPLOAD_DIR, path.basename(track.local_file_path));
     if (!fs.existsSync(fullPath)) return res.status(404).json({ error: "File missing on server" });
-    const stat = fs.statSync(fullPath);
-    const range = req.headers.range;
 
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-      const chunksize = (end - start) + 1;
-      const file = fs.createReadStream(fullPath, { start, end });
+    const size = fs.statSync(fullPath).size;
+    const type = track.mime_type || "audio/mpeg";
+    const rangeHeader = req.headers.range;
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cache-Control", "private, no-store");
+
+    const m = rangeHeader && /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+    if (m) {
+      let start = m[1] ? parseInt(m[1], 10) : 0;
+      let end = m[2] ? parseInt(m[2], 10) : size - 1;
+      if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
+        res.setHeader("Content-Range", `bytes */${size}`);
+        return res.status(416).end();
+      }
+      end = Math.min(end, size - 1);
       res.writeHead(206, {
-        "Content-Range": `bytes ${start}-${end}/${stat.size}`,
-        "Accept-Ranges": "bytes",
-        "Content-Length": chunksize,
-        "Content-Type": track.mime_type || "audio/mpeg",
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Content-Length": end - start + 1,
+        "Content-Type": type,
       });
-      file.pipe(res);
-    } else {
-      res.writeHead(200, {
-        "Content-Length": stat.size,
-        "Content-Type": track.mime_type || "audio/mpeg",
-      });
-      fs.createReadStream(fullPath).pipe(res);
+      return fs.createReadStream(fullPath, { start, end }).pipe(res);
     }
-  } else if (track.source === "google_drive" && track.google_drive_file_id) {
-    // Falls back to Drive streaming
-    const drive = require("../services/googleDrive");
-    const range = req.headers.range;
-    if (range) {
-      await drive.streamFileRange(track.user_id, track.google_drive_file_id, range, res);
-    } else {
-      await drive.streamFile(track.user_id, track.google_drive_file_id, res);
-    }
+
+    res.writeHead(200, { "Content-Length": size, "Content-Type": type });
+    return fs.createReadStream(fullPath).pipe(res);
   }
+
+  if (track.source === "google_drive" && track.google_drive_file_id) {
+    const range = req.headers.range;
+    if (range) return drive.streamFileRange(track.user_id, track.google_drive_file_id, range, res);
+    return drive.streamFile(track.user_id, track.google_drive_file_id, res);
+  }
+
+  return res.status(404).json({ error: "Track has no playable source" });
 });
 
-// ── POST /api/tracks/upload ──────────────────────────────────────────────
-router.post("/upload", requireAdmin, upload.single("file"), async (req, res) => {
-  logger.info(`Track upload attempt: ${req.file?.originalname} by user ${req.userId}`);
-  if (!req.file) {
-    logger.warn("Upload failed: No file provided");
-    return res.status(400).json({ error: "No file uploaded" });
-  }
+const uploadSingle = (req, res, next) =>
+  upload.single("file")(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: `File too large (max ${Math.round(MAX_UPLOAD_BYTES / 1048576)} MB)` });
+    }
+    return res.status(err.status || 400).json({ error: err.message || "Upload failed" });
+  });
 
+// ── POST /api/tracks/upload — VPS-local audio ────────────────────────────────
+router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const fullPath = req.file.path;
-  let metadata = {};
-  let duration = 0;
+
+  const cleanup = () => fs.promises.unlink(fullPath).catch(() => {});
+
+  let common = {};
+  let format = {};
   try {
     const meta = await parseFile(fullPath);
-    metadata = meta.common;
-    duration = Math.round(meta.format.duration || 0);
-    logger.info(`Metadata parsed: ${metadata.title} - ${metadata.artist}`);
+    common = meta.common || {};
+    format = meta.format || {};
   } catch (e) {
-    logger.error("Metadata parse error:", e.message);
+    logger.warn(`Metadata parse failed for ${req.file.filename}: ${e.message}`);
   }
 
-  const title = req.body.title || metadata.title || req.file.originalname.replace(/\.[^/.]+$/, "");
-  const artist = req.body.artist || metadata.artist || "Unknown artist";
-  const composer = req.body.composer || metadata.composer || null;
-  const bpm = req.body.bpm || metadata.bpm || null;
-  const key = req.body.key || metadata.key || null;
+  const num = (v) => (v == null || Number.isNaN(Number(v)) ? null : Math.round(Number(v)));
+  const title = req.body.title || common.title || req.file.originalname.replace(/\.[^/.]+$/, "");
+  const artist = req.body.artist || (common.artists && common.artists[0]) || common.artist || "Unknown artist";
+  const composer = req.body.composer || (common.composer && common.composer[0]) || null;
+  const bpm = num(req.body.bpm) ?? num(common.bpm);
+  const key = req.body.key || common.key || null;
+  const duration = num(format.duration);
 
   try {
-    logger.info(`Inserting track into DB: ${title} (${req.file.filename})`);
     const { rows: [track] } = await query(
       `INSERT INTO tracks (user_id, title, artist, composer, file_name, file_size, mime_type,
          local_file_path, source, bpm, key, duration, clearance_status, is_public)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'local', $9, $10, $11, 'not_cleared', false)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'local',$9,$10,$11,'not_cleared',false)
        RETURNING *`,
-      [req.userId, title, artist, composer, req.file.originalname, req.file.size, req.file.mimetype,
-      req.file.filename, bpm, key, duration]
+      [req.userId, title, artist, composer, req.file.originalname, req.file.size,
+       req.file.mimetype, req.file.filename, bpm, key, duration]
     );
-    logger.info(`Track successfully created: ${track.id}`);
+    logger.info(`Uploaded track ${track.id} (${req.file.filename}, ${req.file.size} bytes)`);
     res.status(201).json(track);
   } catch (err) {
-    logger.error("DB Insert Error:", err.message);
-    res.status(500).json({ error: "Błąd zapisu w bazie danych: " + err.message });
+    await cleanup(); // don't leave an orphan file if the row didn't save
+    logger.error(`Upload DB insert failed: ${err.message}`);
+    res.status(500).json({ error: "Could not save track" });
   }
 });
 
@@ -282,9 +323,16 @@ router.patch("/:id", async (req, res) => {
   res.json(t);
 });
 
-// ── DELETE /api/tracks/:id ─────────────────────────────────────────────────────
+// ── DELETE /api/tracks/:id (also removes the VPS-local file) ─────────────────
 router.delete("/:id", async (req, res) => {
-  await query("DELETE FROM tracks WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
+  const { rows: [track] } = await query(
+    "DELETE FROM tracks WHERE id=$1 AND user_id=$2 RETURNING source, local_file_path",
+    [req.params.id, req.userId]
+  );
+  if (track?.source === "local" && track.local_file_path) {
+    const p = path.join(UPLOAD_DIR, path.basename(track.local_file_path));
+    fs.promises.unlink(p).catch((e) => logger.warn(`Could not delete file ${p}: ${e.message}`));
+  }
   res.json({ success: true });
 });
 

@@ -159,6 +159,64 @@ async function check(name, fn) {
     assert(trackId, "track id");
   });
 
+  let localTrackId;
+  const fakeAudio = Buffer.from("ID3\x03\x00\x00\x00" + "x".repeat(4096));
+
+  await check("upload rejects a non-audio file → 400", async () => {
+    const r = await request(app)
+      .post("/api/tracks/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .attach("file", Buffer.from("hello"), { filename: "notes.txt", contentType: "text/plain" });
+    assert.strictEqual(r.status, 400);
+  });
+
+  await check("admin uploads audio to the VPS library → 201, source=local", async () => {
+    const r = await request(app)
+      .post("/api/tracks/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .field("title", "VPS Master")
+      .field("artist", "HRL")
+      .attach("file", fakeAudio, { filename: "vps master.mp3", contentType: "audio/mpeg" });
+    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
+    assert.strictEqual(r.body.source, "local");
+    assert(r.body.local_file_path, "local_file_path stored");
+    localTrackId = r.body.id;
+  });
+
+  await check("owner streams the local file → 200 + bytes", async () => {
+    const r = await request(app)
+      .get(`/api/tracks/stream/${localTrackId}?token=${adminToken}`);
+    assert.strictEqual(r.status, 200, `got ${r.status}`);
+    assert(r.headers["accept-ranges"] === "bytes");
+    assert(r.body.length > 0 || r.text.length > 0, "streamed a body");
+  });
+
+  await check("local stream honours Range → 206", async () => {
+    const r = await request(app)
+      .get(`/api/tracks/stream/${localTrackId}?token=${adminToken}`)
+      .set("Range", "bytes=0-99");
+    assert.strictEqual(r.status, 206);
+    assert.strictEqual(r.headers["content-range"], `bytes 0-99/${fakeAudio.length}`);
+  });
+
+  await check("GET /api/tracks/storage reports the uploaded bytes", async () => {
+    const r = await request(app).get("/api/tracks/storage").set("Authorization", `Bearer ${adminToken}`);
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    assert(r.body.localFiles >= 1, "counts the file");
+    assert(r.body.localBytes > 0, "sums the bytes");
+  });
+
+  await check("deleting a local track removes its file", async () => {
+    const before = await pool.query("SELECT local_file_path FROM tracks WHERE id=$1", [localTrackId]);
+    const filePath = require("path").join(__dirname, "../uploads", before.rows[0].local_file_path);
+    assert(fs.existsSync(filePath), "file exists before delete");
+    const r = await request(app).delete(`/api/tracks/${localTrackId}`).set("Authorization", `Bearer ${adminToken}`);
+    assert.strictEqual(r.status, 200);
+    // unlink is fire-and-forget — give it a tick
+    await new Promise((res) => setTimeout(res, 50));
+    assert(!fs.existsSync(filePath), "file gone after delete");
+  });
+
   await check("POST /api/playlists (was a missing endpoint) → 201", async () => {
     const r = await request(app)
       .post("/api/playlists")
