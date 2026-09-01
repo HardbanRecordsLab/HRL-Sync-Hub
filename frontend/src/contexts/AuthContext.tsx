@@ -1,110 +1,89 @@
-// Local app auth context - WordPress/Access Manager login bridge removed.
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { api, getToken, setToken, clearToken, AUTH_EXPIRED_EVENT } from "@/lib/api";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-
-export type UserRole = 'admin' | 'student' | 'manager' | 'viewer' | string;
-
-interface User {
+export interface User {
   id: string;
-  userId: string;
   email: string;
-  name: string;
-  full_name: string;
-  avatar?: string;
-  role: UserRole;
-  plan: 'free' | 'starter' | 'pro' | 'label';
-  tier: string;
-  credits: number;
-  is_premium: boolean;
-  pmp_level?: string;
-  expiresAt?: string;
-}
-
-interface Session {
-  user: User;
-  token: string;
+  full_name: string | null;
+  company_name: string | null;
+  avatar_url: string | null;
+  is_admin: boolean;
 }
 
 interface AuthContextValue {
   user: User | null;
-  session: Session | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loading: boolean;
   error: string | null;
-  login: () => void;
-  logout: () => Promise<void>;
-  refreshCredits: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  refresh: () => Promise<void>;
 }
-
-const LOCAL_TOKEN = 'hrl-local-app-token';
-const LOCAL_USER: User = {
-  id: 'local-admin',
-  userId: 'local-admin',
-  email: 'local@hardbanrecordslab.online',
-  name: 'Local Admin',
-  full_name: 'Local Admin',
-  role: 'admin',
-  plan: 'label',
-  tier: 'label',
-  credits: 999999,
-  is_premium: true,
-  pmp_level: 'Local App Access',
-};
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function clearLegacySsoState() {
-  localStorage.removeItem('hrl_jwt_token');
-  document.cookie = 'jwt_token=; Max-Age=0; path=/;';
-  document.cookie = 'jwt_token=; Max-Age=0; path=/; domain=.hardbanrecordslab.online;';
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(LOCAL_USER);
-  const [token, setToken] = useState<string | null>(LOCAL_TOKEN);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const enableLocalSession = () => {
-    clearLegacySsoState();
-    localStorage.setItem('hrl_local_app_auth', LOCAL_TOKEN);
-    setUser(LOCAL_USER);
-    setToken(LOCAL_TOKEN);
-  };
-
-  useEffect(() => {
-    enableLocalSession();
-    setIsLoading(false);
+  const loadMe = useCallback(async () => {
+    if (!getToken()) {
+      setUser(null);
+      return;
+    }
+    try {
+      const { user } = await api.get<{ user: User }>("/api/auth/me");
+      setUser(user);
+    } catch {
+      clearToken();
+      setUser(null);
+    }
   }, []);
 
-  const logout = async (): Promise<void> => {
-    clearLegacySsoState();
-    localStorage.removeItem('hrl_local_app_auth');
-    setUser(LOCAL_USER);
-    setToken(LOCAL_TOKEN);
-  };
+  useEffect(() => {
+    loadMe().finally(() => setIsLoading(false));
+  }, [loadMe]);
 
-  const refreshCredits = async (): Promise<void> => {
-    enableLocalSession();
-  };
+  // Backend rejected the token mid-session → drop it.
+  useEffect(() => {
+    const onExpired = () => {
+      clearToken();
+      setUser(null);
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, []);
 
-  const session = user && token ? { user, token } : null;
-  const isAuthenticated = Boolean(session);
+  const login = useCallback(async (email: string, password: string) => {
+    setError(null);
+    try {
+      const { token, user } = await api.post<{ token: string; user: User }>("/api/auth/login", { email, password });
+      setToken(token);
+      setUser(user);
+    } catch (e) {
+      const msg = (e as Error).message || "Login failed";
+      setError(msg);
+      throw e;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    api.post("/api/auth/logout").catch(() => {});
+    clearToken();
+    setUser(null);
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        session,
-        token,
-        isAuthenticated,
+        isAuthenticated: Boolean(user),
         isLoading,
-        loading: isLoading,
-        error: null,
-        login: enableLocalSession,
+        error,
+        login,
         logout,
-        refreshCredits,
+        refresh: loadMe,
       }}
     >
       {children}
@@ -114,6 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = (): AuthContextValue => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 };

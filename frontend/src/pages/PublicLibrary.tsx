@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Music2, Play, Pause, Loader2 } from "lucide-react";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { usePlayer } from "@/components/player/PlayerProvider";
 import { api, streamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,7 @@ function fmt(s: number | null) {
 }
 
 export default function PublicLibrary() {
-    const player = useAudioPlayer();
+    const player = usePlayer();
 
     const { data: tracks, isLoading } = useQuery({
         queryKey: ["tracks", "public"],

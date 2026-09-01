@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Layout from "@/components/Layout";
 import { api, streamUrl } from "@/lib/api";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { usePlayer } from "@/components/player/PlayerProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -28,21 +28,26 @@ export default function TrackDetail() {
   const { trackId } = useParams<{ trackId: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const player = useAudioPlayer();
+  const player = usePlayer();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
 
   const { data: track, isLoading } = useQuery({
     queryKey: ["track", trackId],
     queryFn: () => api.get<any>(`/api/tracks/${trackId}`),
-    onSuccess: (t: any) => {
-      if (!editing) setForm({
-        title: t.title, artist: t.artist, composer: t.composer ?? "",
-        bpm: t.bpm ?? "", key: t.key ?? "", description: t.description ?? "",
-        clearance_status: t.clearance_status, rights_type: t.rights_type ?? "",
-      });
-    },
   });
+
+  // Seed the edit form once the track loads (react-query v5 has no onSuccess).
+  useEffect(() => {
+    if (track && !editing) {
+      setForm({
+        title: track.title, artist: track.artist, composer: track.composer ?? "",
+        bpm: track.bpm ?? "", key: track.key ?? "", description: track.description ?? "",
+        clearance_status: track.clearance_status, rights_type: track.rights_type ?? "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track]);
 
   const saveMut = useMutation({
     mutationFn: () => api.patch(`/api/tracks/${trackId}`, form),
@@ -94,7 +99,7 @@ export default function TrackDetail() {
   );
 
   const isActive = player.track?.id === track.id;
-  const streamURL = track.google_drive_file_id ? streamUrl(track.google_drive_file_id) : null;
+  const streamURL = track.google_drive_file_id || track.source === "local" ? streamUrl(track.id) : null;
 
   const toggleGenre = (g: string) => {
     const curr = track.track_genres?.map((x: any) => x.genre) ?? [];

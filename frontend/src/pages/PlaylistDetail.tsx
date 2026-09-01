@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { api, streamUrl } from "@/lib/api";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { usePlayer } from "@/components/player/PlayerProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ export default function PlaylistDetail() {
   const { playlistId } = useParams<{ playlistId: string }>();
   const navigate = useNavigate();
   const qc       = useQueryClient();
-  const player   = useAudioPlayer();
+  const player   = usePlayer();
   const [copied, setCopied] = useState<string | null>(null);
 
   const { data: playlist, isLoading } = useQuery({
@@ -43,11 +43,13 @@ export default function PlaylistDetail() {
 
   const playAll = () => {
     if (!playlist?.tracks?.length) return;
-    const queue = playlist.tracks.map((t: any) => ({
-      id: t.id, title: t.title, artist: t.artist,
-      fileUrl: t.google_drive_file_id ? streamUrl(t.google_drive_file_id) : "",
-      bpm: t.bpm, key: t.key, duration: t.duration,
-    })).filter((t: any) => t.fileUrl);
+    const queue = playlist.tracks
+      .filter((t: any) => t.google_drive_file_id || t.source === "local")
+      .map((t: any) => ({
+        id: t.id, title: t.title, artist: t.artist,
+        fileUrl: streamUrl(t.id),
+        bpm: t.bpm, key: t.key, duration: t.duration,
+      }));
     if (queue.length) player.play(queue[0], queue);
   };
 
@@ -130,7 +132,7 @@ export default function PlaylistDetail() {
 
             {playlist.tracks.map((track: any, i: number) => {
               const isActive = player.track?.id === track.id;
-              const hasAudio = !!track.google_drive_file_id;
+              const hasAudio = !!track.google_drive_file_id || track.source === "local";
               return (
                 <div
                   key={track.id}
@@ -143,9 +145,9 @@ export default function PlaylistDetail() {
                   onClick={() => {
                     if (!hasAudio) return;
                     const queue = playlist.tracks
-                      .filter((t: any) => t.google_drive_file_id)
-                      .map((t: any) => ({ id: t.id, title: t.title, artist: t.artist, fileUrl: streamUrl(t.google_drive_file_id), bpm: t.bpm, key: t.key, duration: t.duration }));
-                    player.play({ id: track.id, title: track.title, artist: track.artist, fileUrl: streamUrl(track.google_drive_file_id), bpm: track.bpm, key: track.key, duration: track.duration }, queue);
+                      .filter((t: any) => t.google_drive_file_id || t.source === "local")
+                      .map((t: any) => ({ id: t.id, title: t.title, artist: t.artist, fileUrl: streamUrl(t.id), bpm: t.bpm, key: t.key, duration: t.duration }));
+                    player.play({ id: track.id, title: track.title, artist: track.artist, fileUrl: streamUrl(track.id), bpm: track.bpm, key: track.key, duration: track.duration }, queue);
                   }}
                 >
                   <GripVertical className="w-3.5 h-3.5 text-muted-foreground opacity-30" />

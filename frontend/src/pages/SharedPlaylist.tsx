@@ -1,8 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Music2, Loader2, Download } from "lucide-react";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
-import { streamUrl } from "@/lib/api";
+import { usePlayer } from "@/components/player/PlayerProvider";
+import { sharedStreamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const API = import.meta.env.VITE_API_URL ?? "";
@@ -14,7 +14,7 @@ function fmt(s: number | null) {
 
 export default function SharedPlaylist() {
   const { token } = useParams<{ token: string }>();
-  const player    = useAudioPlayer();
+  const player    = usePlayer();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["shared", token],
@@ -35,11 +35,13 @@ export default function SharedPlaylist() {
       }),
   });
 
+  const trackHasAudio = (t: any) => !!t.google_drive_file_id || t.source === "local";
+
   const playTrack = (track: any, queue: any[]) => {
-    if (!track.google_drive_file_id) return;
+    if (!trackHasAudio(track) || !token) return;
     player.play(
-      { id: track.id, title: track.title, artist: track.artist, fileUrl: streamUrl(track.google_drive_file_id), bpm: track.bpm, key: track.key, duration: track.duration },
-      queue.filter(t => t.google_drive_file_id).map(t => ({ id: t.id, title: t.title, artist: t.artist, fileUrl: streamUrl(t.google_drive_file_id), bpm: t.bpm, key: t.key, duration: t.duration }))
+      { id: track.id, title: track.title, artist: track.artist, fileUrl: sharedStreamUrl(track.id, token), bpm: track.bpm, key: track.key, duration: track.duration },
+      queue.filter(trackHasAudio).map(t => ({ id: t.id, title: t.title, artist: t.artist, fileUrl: sharedStreamUrl(t.id, token), bpm: t.bpm, key: t.key, duration: t.duration }))
     );
     eventMut.mutate({ event_type: "track_played", track_id: track.id });
   };
@@ -91,7 +93,7 @@ export default function SharedPlaylist() {
         <div className="space-y-1">
           {tracks.map((track: any, i: number) => {
             const isActive = player.track?.id === track.id;
-            const hasAudio = !!track.google_drive_file_id;
+            const hasAudio = trackHasAudio(track);
             return (
               <div
                 key={track.id}
@@ -126,9 +128,9 @@ export default function SharedPlaylist() {
                   {track.bpm  && <span className="hrl-badge-dim">{track.bpm} BPM</span>}
                   {track.key  && <span className="hrl-badge-dim">{track.key}</span>}
                   <span className="mono text-sm text-muted-foreground">{fmt(track.duration)}</span>
-                  {link.allow_downloads && track.google_drive_file_id && (
+                  {link.allow_downloads && hasAudio && token && (
                     <a
-                      href={streamUrl(track.google_drive_file_id)}
+                      href={sharedStreamUrl(track.id, token)}
                       download
                       onClick={e => { e.stopPropagation(); eventMut.mutate({ event_type: "track_downloaded", track_id: track.id }); }}
                       className="text-muted-foreground hover:text-foreground transition"

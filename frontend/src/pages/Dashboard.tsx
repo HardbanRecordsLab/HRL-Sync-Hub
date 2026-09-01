@@ -9,7 +9,7 @@ export default function Dashboard() {
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
       // Fetch from VPS Backend instead of direct Supabase
-      const data = await api.get<any>("/analytics/dashboard");
+      const data = await api.get<any>("/api/analytics/dashboard");
       return {
         totalTracks: data.totalTracks ?? 0,
         syncReady: data.syncReady ?? 0,

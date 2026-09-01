@@ -105,11 +105,13 @@ app.get(["/health", "/api/health"], async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/business", businessRoutes);
 
-// Track streaming is reachable with a share token (no login); everything else needs auth.
+// /stream/:id and /public are reachable without a login (the route itself checks
+// ownership token / share token / is_public); everything else under /api/tracks needs auth.
+const { optionalAuth } = authMiddleware;
 app.use(
   "/api/tracks",
   (req, res, next) => {
-    if (req.path.startsWith("/stream/") && req.query.shareToken) return next();
+    if (req.path.startsWith("/stream/") || req.path === "/public") return optionalAuth(req, res, next);
     return authMiddleware(req, res, next);
   },
   tracksRoutes

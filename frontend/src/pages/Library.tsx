@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import Layout from "@/components/Layout";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { usePlayer } from "@/components/player/PlayerProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api, streamUrl } from "@/lib/api";
@@ -26,7 +26,7 @@ function fmt(s: number | null) {
 
 export default function Library() {
   const qc = useQueryClient();
-  const player = useAudioPlayer();
+  const player = usePlayer();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [search, setSearch] = useState("");

@@ -226,7 +226,7 @@ export default function Pitches() {
                           {activeLinks.map(link => (
                             <div key={link.id} className="flex items-center gap-2 p-2 rounded bg-white/3 text-xs">
                               <span className="font-mono text-muted-foreground truncate flex-1">
-                                {process.env.VITE_API_URL || ""}/share/{link.token}
+                                {window.location.origin}/share/{link.token}
                               </span>
                               {link.allow_downloads && <span className="hrl-badge-dim">DL</span>}
                               {link.expires_at && (

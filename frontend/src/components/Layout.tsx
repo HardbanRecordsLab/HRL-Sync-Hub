@@ -5,13 +5,13 @@ import {
   Kanban, BarChart3, HardDrive, Settings, LogOut,
   ChevronLeft, ChevronRight, Music2, Briefcase
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import GlobalSearch from "./GlobalSearch";
 import { cn } from "@/lib/utils";
 import { AudioPlayerBar } from "./player/AudioPlayerBar";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { usePlayer } from "./player/PlayerProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LayoutProps { children: React.ReactNode; }
 
@@ -32,12 +32,13 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
-  const player = useAudioPlayer();
+  const player = usePlayer();
+  const { logout } = useAuth();
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = () => {
+    logout();
     toast.success("Signed out");
-    navigate("/auth");
+    navigate("/");
   };
 
   return (

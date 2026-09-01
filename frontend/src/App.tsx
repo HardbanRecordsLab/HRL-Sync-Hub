@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { PlayerProvider } from "@/components/player/PlayerProvider";
 
 import Dashboard from "./pages/Dashboard";
 import Library from "./pages/Library";
@@ -26,9 +27,13 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
 
-// AuthContext handles loading state + redirect to WP login on 401
+function Protected({ children }: { children: JSX.Element }) {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? children : <Navigate to="/" replace />;
+}
+
 function AppRoutes() {
-  const { user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -38,25 +43,28 @@ function AppRoutes() {
     );
   }
 
-  const isAuthenticated = Boolean(user);
-
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={isAuthenticated ? <Dashboard /> : <Auth />} />
+
+        {/* Public */}
         <Route path="/share/:token" element={<SharedPlaylist />} />
         <Route path="/public-library" element={<PublicLibrary />} />
-        <Route path="/library" element={isAuthenticated ? <Library /> : <Navigate to="/" replace />} />
-        <Route path="/library/:trackId" element={isAuthenticated ? <TrackDetail /> : <Navigate to="/" replace />} />
-        <Route path="/lyrics" element={isAuthenticated ? <LyricsCatalog /> : <Navigate to="/" replace />} />
-        <Route path="/drive" element={isAuthenticated ? <GoogleDrive /> : <Navigate to="/" replace />} />
-        <Route path="/pitches" element={isAuthenticated ? <Pitches /> : <Navigate to="/" replace />} />
-        <Route path="/pitches/:playlistId" element={isAuthenticated ? <PlaylistDetail /> : <Navigate to="/" replace />} />
-        <Route path="/contacts" element={isAuthenticated ? <Contacts /> : <Navigate to="/" replace />} />
-        <Route path="/projects" element={isAuthenticated ? <Projects /> : <Navigate to="/" replace />} />
-        <Route path="/business" element={isAuthenticated ? <BusinessHub /> : <Navigate to="/" replace />} />
-        <Route path="/analytics" element={isAuthenticated ? <Analytics /> : <Navigate to="/" replace />} />
-        <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/" replace />} />
+
+        {/* Authenticated */}
+        <Route path="/library" element={<Protected><Library /></Protected>} />
+        <Route path="/library/:trackId" element={<Protected><TrackDetail /></Protected>} />
+        <Route path="/lyrics" element={<Protected><LyricsCatalog /></Protected>} />
+        <Route path="/drive" element={<Protected><GoogleDrive /></Protected>} />
+        <Route path="/pitches" element={<Protected><Pitches /></Protected>} />
+        <Route path="/pitches/:playlistId" element={<Protected><PlaylistDetail /></Protected>} />
+        <Route path="/contacts" element={<Protected><Contacts /></Protected>} />
+        <Route path="/projects" element={<Protected><Projects /></Protected>} />
+        <Route path="/business" element={<Protected><BusinessHub /></Protected>} />
+        <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
+        <Route path="/settings" element={<Protected><Settings /></Protected>} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
@@ -70,7 +78,9 @@ export default function App() {
         <Toaster />
         <Sonner theme="dark" />
         <AuthProvider>
-          <AppRoutes />
+          <PlayerProvider>
+            <AppRoutes />
+          </PlayerProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
