@@ -55,7 +55,7 @@ router.get("-player", (req, res) => {
   const API = process.env.API_URL || `https://${req.hostname}`;
 
   res.setHeader("Content-Type", "text/html");
-  res.setHeader("X-Frame-Options", "ALLOWALL");
+  // Framing is governed by CSP frame-ancestors (see middleware/security.js).
   res.send(buildPlayerHTML(token, theme, API));
 });
 

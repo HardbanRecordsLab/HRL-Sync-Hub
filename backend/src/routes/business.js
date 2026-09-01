@@ -56,7 +56,6 @@ router.get('/channels/:id/embed', async (req, res) => {
 
         // Return a custom HTML or reuse the playlist player with channel context
         res.setHeader("Content-Type", "text/html");
-        res.setHeader("X-Frame-Options", "ALLOWALL");
 
         // For now, we'll send a message that this is a premium channel
         res.send(`

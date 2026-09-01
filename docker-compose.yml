@@ -1,0 +1,48 @@
+# HRL Sync — API + PostgreSQL
+#
+#   cp backend/.env.example backend/.env     # fill JWT_SECRET, ADMIN_*, Google keys
+#   docker compose up -d --build
+#   docker compose exec api npm run db:seed  # create the admin user (ADMIN_EMAIL / ADMIN_PASSWORD)
+#
+# The frontend deploys separately (Vercel) with VITE_API_URL pointing at this API.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hrlsync
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hrlsync_dev}
+      POSTGRES_DB: hrlsync
+    volumes:
+      - hrl_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hrlsync -d hrlsync"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "5432"
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      # Orchestration overrides — these win over backend/.env
+      NODE_ENV: production
+      PORT: 3001
+      DB_SSL: "false"
+      DATABASE_URL: postgres://hrlsync:${POSTGRES_PASSWORD:-hrlsync_dev}@db:5432/hrlsync
+    ports:
+      - "${API_PORT:-3001}:3001"
+    volumes:
+      - hrl_uploads:/app/uploads
+
+volumes:
+  hrl_pgdata:
+  hrl_uploads:
