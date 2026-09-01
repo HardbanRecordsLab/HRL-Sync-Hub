@@ -43,6 +43,7 @@ const testConnection = async () => {
     logger.info("✅ PostgreSQL connected");
   } catch (err) {
     logger.error("❌ PostgreSQL connection failed:", err.message);
+    if (process.env.NODE_ENV === "test") throw err;
     process.exit(1);
   }
 };

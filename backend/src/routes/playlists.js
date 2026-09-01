@@ -55,6 +55,17 @@ router.get("/", async (req, res) => {
   res.json(rows);
 });
 
+// POST /api/playlists
+router.post("/", async (req, res) => {
+  const { name, description } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: "name required" });
+  const { rows: [p] } = await query(
+    "INSERT INTO playlists (user_id, name, description) VALUES ($1, $2, $3) RETURNING *",
+    [req.userId, name.trim(), description || null]
+  );
+  res.status(201).json({ ...p, track_count: 0, share_links: [] });
+});
+
 // GET /api/playlists/:id
 router.get("/:id", async (req, res) => {
   const pl = await queryOne("SELECT * FROM playlists WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);

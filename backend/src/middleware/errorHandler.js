@@ -1,9 +1,13 @@
 const { logger } = require("../utils/logger");
 
 module.exports = (err, req, res, next) => {
-  logger.error({ msg: err.message, path: req.path, stack: err.stack?.split("\n")[1] });
   const status = err.status || err.statusCode || 500;
-  const message = process.env.NODE_ENV === "production" && status === 500
-    ? "Internal server error" : err.message;
-  res.status(status).json({ error: message });
+  if (status >= 500) {
+    logger.error(`${req.method} ${req.originalUrl} → ${status}: ${err.message}\n${err.stack || ""}`);
+  } else {
+    logger.warn(`${req.method} ${req.originalUrl} → ${status}: ${err.message}`);
+  }
+  const message =
+    process.env.NODE_ENV === "production" && status === 500 ? "Internal server error" : err.message;
+  res.status(status).json({ error: message, code: err.code });
 };
