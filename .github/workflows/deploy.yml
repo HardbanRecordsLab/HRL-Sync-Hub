@@ -39,9 +39,12 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd ${{ secrets.DEPLOY_DIR }}          # e.g. /srv/hrl-sync
+            cd ${{ secrets.DEPLOY_DIR }}
             git pull --ff-only origin main
-            docker compose pull db || true
             docker compose up -d --build
-            docker compose exec -T api node -e "require('./src/db/migrate')().then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)})"
+            # wait for the API to report healthy
+            for i in $(seq 1 20); do
+              curl -sf localhost:9110/health && break
+              sleep 3
+            done
             docker compose ps
