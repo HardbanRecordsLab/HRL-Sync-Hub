@@ -29,7 +29,6 @@ const { getHelmetConfig, RateLimitManager } = require("./middleware/security");
 const authRoutes = require("./routes/auth");
 const tracksRoutes = require("./routes/tracks");
 const lyricsRoutes = require("./routes/lyrics");
-const driveRoutes = require("./routes/drive");
 const playlistsRoutes = require("./routes/playlists");
 const analyticsRoutes = require("./routes/analytics");
 const embedRoutes = require("./routes/embed");
@@ -97,7 +96,8 @@ app.get(["/health", "/api/health"], async (req, res) => {
     app: "HRL Sync API",
     version: require("../package.json").version,
     db: dbOk ? "connected" : "error",
-    drive: !!process.env.GOOGLE_CLIENT_ID,
+    storage: process.env.STORAGE_DRIVER || "s3",
+    ai: !!process.env.OPENROUTER_API_KEY,
     ts: new Date().toISOString(),
   });
 });
@@ -119,7 +119,6 @@ app.use(
 );
 
 app.use("/api/lyrics", lyricsRoutes); // route-level optionalAuth / auth
-app.use("/api/drive", authMiddleware, driveRoutes);
 app.use("/api/playlists", playlistsRoutes); // public share route + router.use(auth)
 app.use("/api/analytics", analyticsRoutes); // public event route + router.use(auth)
 app.use("/api/embed", embedRoutes);

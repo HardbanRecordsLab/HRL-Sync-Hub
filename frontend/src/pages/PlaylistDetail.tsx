@@ -44,7 +44,7 @@ export default function PlaylistDetail() {
   const playAll = () => {
     if (!playlist?.tracks?.length) return;
     const queue = playlist.tracks
-      .filter((t: any) => t.google_drive_file_id || t.source === "local")
+      .filter((t: any) => t.source === "local")
       .map((t: any) => ({
         id: t.id, title: t.title, artist: t.artist,
         fileUrl: streamUrl(t.id),
@@ -132,7 +132,7 @@ export default function PlaylistDetail() {
 
             {playlist.tracks.map((track: any, i: number) => {
               const isActive = player.track?.id === track.id;
-              const hasAudio = !!track.google_drive_file_id || track.source === "local";
+              const hasAudio = track.source === "local";
               return (
                 <div
                   key={track.id}
@@ -145,7 +145,7 @@ export default function PlaylistDetail() {
                   onClick={() => {
                     if (!hasAudio) return;
                     const queue = playlist.tracks
-                      .filter((t: any) => t.google_drive_file_id || t.source === "local")
+                      .filter((t: any) => t.source === "local")
                       .map((t: any) => ({ id: t.id, title: t.title, artist: t.artist, fileUrl: streamUrl(t.id), bpm: t.bpm, key: t.key, duration: t.duration }));
                     player.play({ id: track.id, title: track.title, artist: track.artist, fileUrl: streamUrl(track.id), bpm: track.bpm, key: track.key, duration: track.duration }, queue);
                   }}

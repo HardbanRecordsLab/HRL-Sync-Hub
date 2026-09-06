@@ -20,7 +20,6 @@ const Projects = lazy(() => import("./pages/Projects"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Settings = lazy(() => import("./pages/Settings"));
 const LyricsCatalog = lazy(() => import("./pages/LyricsCatalog"));
-const GoogleDrive = lazy(() => import("./pages/GoogleDrive"));
 const BusinessHub = lazy(() => import("./pages/BusinessHub"));
 const PublicLibrary = lazy(() => import("./pages/PublicLibrary"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -61,7 +60,6 @@ function AppRoutes() {
         <Route path="/library" element={<Protected><Library /></Protected>} />
         <Route path="/library/:trackId" element={<Protected><TrackDetail /></Protected>} />
         <Route path="/lyrics" element={<Protected><LyricsCatalog /></Protected>} />
-        <Route path="/drive" element={<Protected><GoogleDrive /></Protected>} />
         <Route path="/pitches" element={<Protected><Pitches /></Protected>} />
         <Route path="/pitches/:playlistId" element={<Protected><PlaylistDetail /></Protected>} />
         <Route path="/contacts" element={<Protected><Contacts /></Protected>} />

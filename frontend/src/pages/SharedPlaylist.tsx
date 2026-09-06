@@ -35,7 +35,7 @@ export default function SharedPlaylist() {
       }),
   });
 
-  const trackHasAudio = (t: any) => !!t.google_drive_file_id || t.source === "local";
+  const trackHasAudio = (t: any) => t.source === "local";
 
   const playTrack = (track: any, queue: any[]) => {
     if (!trackHasAudio(track) || !token) return;

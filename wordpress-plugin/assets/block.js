@@ -8,7 +8,7 @@
     title: 'HRL Sync Playlist',
     icon: el('span', null, '🎵'),
     category: 'embed',
-    description: 'Embed an HRL Sync music playlist — audio streamed from Google Drive.',
+    description: 'Embed an HRL Sync music playlist — audio streamed from the HRL Sync library.',
     keywords: ['hrl','music','playlist','audio','hardban'],
     attributes: {
       token:    { type: 'string',  default: '' },

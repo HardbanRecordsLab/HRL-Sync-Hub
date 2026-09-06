@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Library, FileText, Radio, Users,
-  Kanban, BarChart3, HardDrive, Settings, LogOut,
-  ChevronLeft, ChevronRight, Music2, Briefcase
+  Kanban, BarChart3, Settings, LogOut,
+  ChevronLeft, ChevronRight, Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +19,6 @@ const NAV = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/library", icon: Library, label: "Library" },
   { to: "/lyrics", icon: FileText, label: "Lyrics" },
-  { to: "/drive", icon: HardDrive, label: "Drive" },
   { to: "/pitches", icon: Radio, label: "Pitches" },
   { to: "/contacts", icon: Users, label: "Contacts" },
   { to: "/projects", icon: Kanban, label: "Projects" },

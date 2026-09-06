@@ -1,77 +1,99 @@
 /**
- * AI service (Groq + Gemini) — fully optional. If the API keys are absent the
- * service degrades gracefully instead of crashing the process at boot.
+ * AI service via OpenRouter (OpenAI-compatible). Fully optional.
+ *
+ *   OPENROUTER_API_KEY   — required to enable AI features
+ *   AI_MODELS            — comma-separated model ids, tried in order.
+ *                          Default: free models first, one cheap paid fallback.
+ *
+ * Free ":free" models rate-limit / go offline often, so we walk the list until
+ * one answers.
  */
 const { logger } = require("../utils/logger");
 
-let _groq = null;
-let _gemini = null;
+const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
-function groq() {
-  if (_groq === null) {
-    if (!process.env.GROQ_API_KEY) return null;
-    const { Groq } = require("groq-sdk");
-    _groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  }
-  return _groq;
-}
+const DEFAULT_MODELS = [
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "deepseek/deepseek-chat-v3-0324:free",
+  "google/gemini-2.0-flash-exp:free",
+  "google/gemini-2.0-flash-001", // cheap, fast, reliable JSON — paid fallback
+];
 
-function gemini() {
-  if (_gemini === null) {
-    if (!process.env.GEMINI_API_KEY) return null;
-    const { GoogleGenerativeAI } = require("@google/generative-ai");
-    _gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  }
-  return _gemini;
+function models() {
+  const env = (process.env.AI_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return env.length ? env : DEFAULT_MODELS;
 }
 
 class AIService {
   get available() {
-    return !!(process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY);
+    return !!process.env.OPENROUTER_API_KEY;
   }
 
-  async quickChat(prompt, systemMessage = "You are a helpful assistant for HRL Sync, a music sync-licensing library.") {
-    const client = groq();
-    if (!client) {
+  async chat(prompt, system = "You are a music supervisor and metadata expert for a sync-licensing library.") {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) {
       const err = new Error("AI_NOT_CONFIGURED");
       err.status = 503;
       throw err;
     }
-    const completion = await client.chat.completions.create({
+
+    const body = {
       messages: [
-        { role: "system", content: systemMessage },
+        { role: "system", content: system },
         { role: "user", content: prompt },
       ],
-      model: "llama-3.3-70b-versatile",
-    });
-    return completion.choices[0].message.content;
-  }
+      temperature: 0.3,
+    };
 
-  async deepAnalysis(prompt) {
-    const client = gemini();
-    if (!client) {
-      const err = new Error("AI_NOT_CONFIGURED");
-      err.status = 503;
-      throw err;
+    let lastErr;
+    for (const model of models()) {
+      try {
+        const res = await fetch(ENDPOINT, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": process.env.API_URL || "https://hrl-sync.hardbanrecordslab.online",
+            "X-Title": "HRL Sync Hub",
+          },
+          body: JSON.stringify({ ...body, model }),
+        });
+        if (!res.ok) {
+          lastErr = new Error(`${model} → HTTP ${res.status}`);
+          logger.warn(`AI: ${lastErr.message}, trying next model`);
+          continue;
+        }
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text) return text;
+        lastErr = new Error(`${model} → empty response`);
+      } catch (e) {
+        lastErr = e;
+        logger.warn(`AI: ${model} failed (${e.message}), trying next model`);
+      }
     }
-    const model = client.getGenerativeModel({ model: "gemini-1.5-pro" });
-    const result = await model.generateContent(prompt);
-    return (await result.response).text();
+    const err = new Error(`AI_ALL_MODELS_FAILED: ${lastErr?.message || "unknown"}`);
+    err.status = 502;
+    throw err;
   }
 
-  async detectMoodAndGenre(trackMetadata) {
-    const prompt = `Analyze this track metadata and suggest 3 genres and 2 moods.
-Title: ${trackMetadata.title}
-Artist: ${trackMetadata.artist}
-Description: ${trackMetadata.description || "N/A"}
-BPM: ${trackMetadata.bpm || "N/A"}
-Key: ${trackMetadata.key || "N/A"}
-Return strict JSON: { "genres": ["..","..",".."], "moods": ["..",".."] }`;
+  async detectMoodAndGenre(track) {
+    const prompt = `Analyze this track and suggest genres and moods.
+Title: ${track.title}
+Artist: ${track.artist}
+Description: ${track.description || "N/A"}
+BPM: ${track.bpm || "N/A"}
+Key: ${track.key || "N/A"}
+Reply with ONLY strict JSON: {"genres":["..","..",".."],"moods":["..",".."]}`;
 
     try {
-      const response = await this.quickChat(prompt, "You are a music supervisor and metadata expert.");
-      const jsonStr = response.match(/\{[\s\S]*\}/)?.[0] || response;
-      return JSON.parse(jsonStr);
+      const raw = await this.chat(prompt);
+      const json = raw.match(/\{[\s\S]*\}/)?.[0] || raw;
+      const parsed = JSON.parse(json);
+      return {
+        genres: Array.isArray(parsed.genres) ? parsed.genres.slice(0, 5) : [],
+        moods: Array.isArray(parsed.moods) ? parsed.moods.slice(0, 4) : [],
+      };
     } catch (e) {
       logger.warn("AI mood/genre detection failed: " + e.message);
       return { genres: [], moods: [] };
@@ -79,8 +101,9 @@ Return strict JSON: { "genres": ["..","..",".."], "moods": ["..",".."] }`;
   }
 
   async generateChannelPitch(channelName, businessType, description) {
-    return this.deepAnalysis(
-      `Write a 2-paragraph marketing pitch for a curated music channel named "${channelName}" for a ${businessType}. Philosophy: ${description}`
+    return this.chat(
+      `Write a 2-paragraph marketing pitch for a curated music channel "${channelName}" for a ${businessType}. Philosophy: ${description}`,
+      "You are a senior music-branding copywriter."
     );
   }
 }

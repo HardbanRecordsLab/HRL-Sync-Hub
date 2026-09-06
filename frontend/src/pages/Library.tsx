@@ -1,8 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Search, Play, MoreVertical, Loader2, HardDrive, Upload, Plus, Music2,
-  ExternalLink, ListPlus,
+  Search, Play, MoreVertical, Loader2, Upload, Plus, Music2, ListPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,7 +104,7 @@ export default function Library() {
 
   const handlePlay = (track: any) => {
     const queue = tracks
-      .filter((t) => t.google_drive_file_id || t.source === "local")
+      .filter((t) => t.local_file_path)
       .map((t) => ({
         id: t.id, title: t.title, artist: t.artist,
         fileUrl: streamUrl(t.id), duration: t.duration, bpm: t.bpm, key: t.key,
@@ -137,13 +136,6 @@ export default function Library() {
               {uploadProg
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> Uploading {uploadProg.done}/{uploadProg.total}…</>
                 : <><Upload className="w-3.5 h-3.5 mr-2" /> Upload audio</>}
-            </Button>
-            <Button
-              variant="outline" size="sm"
-              className="hrl-label border-dashed border-border text-muted-foreground"
-              onClick={() => (window.location.href = "/drive")}
-            >
-              <HardDrive className="w-3.5 h-3.5 mr-1.5" /> Import from Drive
             </Button>
           </div>
         </div>
@@ -267,14 +259,9 @@ export default function Library() {
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
 
-                      {track.google_drive_file_id && (
-                        <DropdownMenuItem onClick={() => window.open(`https://drive.google.com/file/d/${track.google_drive_file_id}/view`, "_blank")}>
-                          <ExternalLink className="w-3.5 h-3.5 mr-2" /> Open in Drive
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
-                        onClick={() => { if (confirm("Remove from library? This deletes the file from the VPS.")) deleteMutation.mutate(track.id); }}
+                        onClick={() => { if (confirm("Remove from library? This deletes the audio file too.")) deleteMutation.mutate(track.id); }}
                       >
                         Remove
                       </DropdownMenuItem>

@@ -2,7 +2,7 @@
 
 Prywatna biblioteka sync-licensingowa Hardban Records Lab: katalog utworów na własnym
 magazynie obiektowym (MinIO/S3), współdzielony odtwarzacz strumieniowy, playlisty
-pitchowe z linkami do klientów, katalog tekstów (opcjonalny sync z Google Docs),
+pitchowe z linkami do klientów, katalog tekstów,
 CRM kontaktów, kanban projektów i analityka odsłuchań.
 
 ```
@@ -55,11 +55,11 @@ cd frontend && npm run build         # typecheck + build
 | Magazyn audio | MinIO (kontener, wewn.) · bucket `hrl-audio` |
 
 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — Docker Compose, Vercel, Nginx/TLS,
-GitHub Actions, Google OAuth, WordPress plugin.
+GitHub Actions, WordPress plugin.
 
 ## Roadmap
 
 `docs/update_app_docs/` — analizy i pomysły (waveform, wyszukiwarka fasetowa,
 zarządzanie prawami/splitami, umowy licencyjne, białe etykiety, integracje
 Spotify/Discogs). Rdzeń (katalog + upload na MinIO + player + pitche + share +
-analityka + opcjonalny Drive/Docs) działa end-to-end.
+analityka) działa end-to-end.

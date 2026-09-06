@@ -3,7 +3,6 @@ const router  = express.Router();
 const auth    = require("../middleware/auth");
 const { optionalAuth } = require("../middleware/auth");
 const { query, queryOne, queryAll } = require("../db/pool");
-const driveService = require("../services/googleDrive");
 
 // ── GET /api/lyrics ────────────────────────────────────────────────────────────
 router.get("/", optionalAuth, async (req, res) => {
@@ -30,7 +29,7 @@ router.get("/", optionalAuth, async (req, res) => {
 
   const rows = await queryAll(
     `SELECT l.id,l.title,l.artist,l.language,l.is_explicit,l.is_public,l.status,
-       l.preview_text,l.google_doc_id,l.last_synced_from_drive,l.created_at,l.updated_at,
+       l.preview_text,l.created_at,l.updated_at,
        t.title AS track_title, t.artist AS track_artist
      FROM lyrics l
      LEFT JOIN tracks t ON t.id = l.track_id
@@ -63,16 +62,16 @@ router.get("/:id", optionalAuth, async (req, res) => {
 // ── POST /api/lyrics ───────────────────────────────────────────────────────────
 router.post("/", auth, async (req, res) => {
   const { title, artist, content="", language="en", is_explicit=false, is_public=false,
-    status="draft", google_doc_id, track_id, copyright_notice, notes } = req.body;
+    status="draft", track_id, copyright_notice, notes } = req.body;
   if (!title) return res.status(400).json({ error: "title required" });
 
   const preview = content.replace(/<[^>]*>/g, "").substring(0, 200);
   const { rows: [row] } = await query(
     `INSERT INTO lyrics (user_id, title, artist, content, preview_text, language, is_explicit,
-       is_public, status, google_doc_id, track_id, copyright_notice, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+       is_public, status, track_id, copyright_notice, notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
     [req.userId, title, artist||null, content, preview, language, is_explicit,
-     is_public, status, google_doc_id||null, track_id||null, copyright_notice||null, notes||null]
+     is_public, status, track_id||null, copyright_notice||null, notes||null]
   );
   res.status(201).json(row);
 });
@@ -84,7 +83,7 @@ router.put("/:id", auth, async (req, res) => {
   if (existing.user_id !== req.userId) return res.status(403).json({ error: "Forbidden" });
 
   const allowed = ["title","artist","content","language","is_explicit","is_public",
-    "status","google_doc_id","track_id","copyright_notice","notes","timecodes"];
+    "status","track_id","copyright_notice","notes","timecodes"];
   const sets = [], params = [];
   allowed.forEach(k => {
     if (req.body[k] !== undefined) { params.push(req.body[k]); sets.push(`${k} = $${params.length}`); }
@@ -107,26 +106,6 @@ router.delete("/:id", auth, async (req, res) => {
   if (!existing || existing.user_id !== req.userId) return res.status(404).json({ error: "Not found" });
   await query("DELETE FROM lyrics WHERE id = $1", [req.params.id]);
   res.json({ success: true });
-});
-
-// ── POST /api/lyrics/:id/sync-with-drive ──────────────────────────────────────
-router.post("/:id/sync-with-drive", auth, async (req, res) => {
-  const row = await queryOne(
-    "SELECT * FROM lyrics WHERE id = $1 AND user_id = $2",
-    [req.params.id, req.userId]
-  );
-  if (!row) return res.status(404).json({ error: "Not found" });
-  if (!row.google_doc_id) return res.status(400).json({ error: "No Google Doc linked" });
-
-  const { title, text } = await driveService.readGoogleDoc(req.userId, row.google_doc_id);
-  const preview = text.substring(0, 200);
-
-  const { rows: [updated] } = await query(
-    `UPDATE lyrics SET content=$1, preview_text=$2, last_synced_from_drive=now(), updated_at=now()
-     WHERE id=$3 RETURNING *`,
-    [text, preview, row.id]
-  );
-  res.json({ success: true, lyrics: updated });
 });
 
 // ── GET /api/lyrics/track/:trackId ────────────────────────────────────────────

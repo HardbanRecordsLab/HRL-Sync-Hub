@@ -108,8 +108,3 @@ export function sharedStreamUrl(trackId: string, shareToken: string) {
   return `${BASE}/api/tracks/stream/${trackId}?shareToken=${encodeURIComponent(shareToken)}`;
 }
 
-/** Preview a Google Drive file directly (before importing it as a track). */
-export function driveStreamUrl(fileId: string) {
-  const token = getToken() ?? "";
-  return `${BASE}/api/drive/stream/${fileId}?token=${encodeURIComponent(token)}`;
-}

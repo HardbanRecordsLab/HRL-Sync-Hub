@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { query, queryOne, queryAll } = require("../db/pool");
 const { logger } = require("../utils/logger");
-const drive = require("../services/googleDrive");
 const objectStore = require("../services/storage");
 const multer = require("multer");
 const path = require("path");
@@ -124,13 +123,7 @@ router.get("/stream/:id", async (req, res) => {
     return full.pipe(res);
   }
 
-  if (track.source === "google_drive" && track.google_drive_file_id) {
-    const range = req.headers.range;
-    if (range) return drive.streamFileRange(track.user_id, track.google_drive_file_id, range, res);
-    return drive.streamFile(track.user_id, track.google_drive_file_id, res);
-  }
-
-  return res.status(404).json({ error: "Track has no playable source" });
+  return res.status(404).json({ error: "Track has no playable file" });
 });
 
 const uploadSingle = (req, res, next) =>
@@ -256,7 +249,7 @@ router.get("/search", async (req, res) => {
   if (!q || q.length < 2) return res.json({ tracks: [] });
 
   const rows = await queryAll(
-    `SELECT t.id, t.title, t.artist, t.bpm, t.key, t.duration, t.clearance_status, t.google_drive_file_id,
+    `SELECT t.id, t.title, t.artist, t.bpm, t.key, t.duration, t.clearance_status,
        similarity(t.title, $2) AS title_score,
        similarity(t.artist, $2) AS artist_score
      FROM tracks t
@@ -296,21 +289,21 @@ router.get("/:id", async (req, res) => {
   res.json(track);
 });
 
-// ── POST /api/tracks (manual create) ──────────────────────────────────────────
+// ── POST /api/tracks — metadata-only row (no file; e.g. bulk import / tests) ──
 router.post("/", requireAdmin, async (req, res) => {
   const {
     title, artist, composer, isrc, iswc, file_name, file_size, mime_type,
-    google_drive_file_id, duration, bpm, key, description, rights_type, clearance_status
+    duration, bpm, key, description, rights_type, clearance_status
   } = req.body;
   if (!title || !artist || !file_name) return res.status(400).json({ error: "title, artist, file_name required" });
 
   const { rows: [t] } = await query(
     `INSERT INTO tracks (user_id,title,artist,composer,isrc,iswc,file_name,file_size,mime_type,
-       google_drive_file_id,duration,bpm,key,description,rights_type,clearance_status,source)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'google_drive')
+       duration,bpm,key,description,rights_type,clearance_status,source)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'local')
      RETURNING *`,
     [req.userId, title, artist, composer ?? null, isrc ?? null, iswc ?? null, file_name,
-    file_size ?? null, mime_type ?? 'audio/mpeg', google_drive_file_id ?? null,
+    file_size ?? null, mime_type ?? 'audio/mpeg',
     duration ?? null, bpm ?? null, key ?? null, description ?? null,
     rights_type ?? null, clearance_status ?? 'not_cleared']
   );
@@ -410,12 +403,12 @@ router.post("/:id/rights", async (req, res) => {
 
 // ── POST /api/tracks/:id/versions ─────────────────────────────────────────────
 router.post("/:id/versions", async (req, res) => {
-  const { version_type, google_drive_file_id, file_name, file_size } = req.body;
+  const { version_type, local_file_path, file_name, file_size } = req.body;
   if (!version_type || !file_name) return res.status(400).json({ error: "version_type and file_name required" });
 
   const { rows: [v] } = await query(
-    "INSERT INTO track_versions (track_id,version_type,google_drive_file_id,file_name,file_size) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-    [req.params.id, version_type, google_drive_file_id ?? null, file_name, file_size ?? null]
+    "INSERT INTO track_versions (track_id,version_type,local_file_path,file_name,file_size) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+    [req.params.id, version_type, local_file_path ?? null, file_name, file_size ?? null]
   );
   res.status(201).json(v);
 });

@@ -10,31 +10,24 @@ hrl-sync.hub.hardbanrecordslab…     │  API (Node 20 + Express) :9110       �
         │                            └─────────────────────────────────────┘
         │                                         ▲
         │                            WordPress plugin  [hrlsync token="…"]   (opcjonalnie)
-        │                            Google Drive / Docs                     (opcjonalny import)
 ```
 
 **Magazyn audio:** MinIO (S3-compatible) w kontenerze na VPS. API jest jedyną bramką —
 proxy-streamuje bajty przez `/api/tracks/stream/:id` (Range/seek), nigdy nie wystawia
 obiektów publicznie. `STORAGE_DRIVER=fs` przełącza na lokalny katalog (tylko dev).
-Google Drive jest opcjonalnym źródłem importu.
 
 **Auth:** własny JWT (email + hasło). Konta zakłada administrator — brak publicznej rejestracji.
 
 ---
 
-## 1. Google Cloud (opcjonalne, ale potrzebne do Drive/Docs)
+## 1. AI — auto-tagowanie (opcjonalne, OpenRouter)
 
-1. Nowy projekt → **APIs & Services → Enable**: `Google Drive API`, `Google Docs API`
-2. **Credentials → OAuth 2.0 Client ID → Web application**
-   Authorized redirect URIs:
-   ```text
-   https://hrl-sync.hardbanrecordslab.online/api/auth/google/callback
-   http://localhost:3001/api/auth/google/callback
-   ```
-3. Zapisz `Client ID` + `Client Secret` → do `.env` na VPS (`/srv/hrl-sync/.env`) →
-   `docker compose restart api`
-4. (Opcjonalnie) Service Account → JSON w jednej linii → `GOOGLE_SERVICE_ACCOUNT_JSON`
-   (potrzebne tylko do publicznego odtwarzania w embed playerze)
+1. `console.openrouter.ai` → API key
+2. Do `.env` na VPS: `OPENROUTER_API_KEY=sk-or-...` → `docker compose up -d`
+3. (opcjonalnie) `AI_MODELS=` — lista modeli po przecinku, próbowane po kolei
+   (darmowe `:free` najpierw, jeden tani płatny na końcu). Puste = wbudowany default.
+
+Bez klucza przycisk „AI Insight" na stronie utworu zwraca 503 — tagujesz ręcznie.
 
 ---
 
@@ -98,10 +91,8 @@ API_PORT=9110
 API_URL=https://hrl-sync.hardbanrecordslab.online
 FRONTEND_URL=https://hrl-sync.hub.hardbanrecordslab.online
 ALLOWED_ORIGINS=https://hrl-sync.hub.hardbanrecordslab.online
-GOOGLE_CLIENT_ID=...          # opcjonalne (import z Drive + teksty z Docs)
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=https://hrl-sync.hardbanrecordslab.online/api/auth/google/callback
-# opcjonalne: GROQ_API_KEY, GEMINI_API_KEY (AI-tagi), SMTP_* (maile)
+OPENROUTER_API_KEY=sk-or-...  # opcjonalne — AI auto-tagowanie
+# opcjonalne: SMTP_* (maile), SENTRY_DSN
 ```
 
 `DATABASE_URL`, `STORAGE_DRIVER`, `S3_ENDPOINT`, `PORT`, `NODE_ENV` ustawia `docker-compose.yml`
@@ -157,8 +148,6 @@ Sekrety repo: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_KEY`, `DEPLOY_DIR`.
    → API weryfikuje JWT/ownership → GetObject z MinIO (Range = seek) → przeglądarka
 3. Playlisty (Pitches) → Share link → publiczne /share/{token}
    odtwarzanie: /api/tracks/stream/{trackId}?shareToken={token}
-4. (opcjonalnie) /drive → Connect Google Drive → Import → tracks (source='google_drive')
-   stream: API proxy-uje z Drive kontem właściciela
 ```
 
 ---

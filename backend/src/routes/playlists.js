@@ -19,7 +19,7 @@ router.get("/share/:token", optionalAuth, async (req, res) => {
 
   const tracks = await queryAll(
     `SELECT t.id, t.title, t.artist, t.duration, t.bpm, t.key,
-            t.file_name, t.google_drive_file_id, t.mime_type, t.source,
+            t.file_name, t.mime_type, t.source,
             pt.id AS pt_id, pt.position, pt.track_comment
      FROM playlist_tracks pt JOIN tracks t ON t.id = pt.track_id
      WHERE pt.playlist_id = $1 ORDER BY pt.position`,
@@ -73,7 +73,7 @@ router.get("/:id", async (req, res) => {
 
   const tracks = await queryAll(
     `SELECT t.id,t.title,t.artist,t.duration,t.bpm,t.key,t.clearance_status,
-            t.google_drive_file_id,t.file_name,t.source,
+            t.file_name,t.source,
             pt.id AS pt_id,pt.position,pt.track_comment,
             COALESCE(json_agg(DISTINCT jsonb_build_object('genre',tg.genre)) FILTER (WHERE tg.id IS NOT NULL),'[]') AS track_genres
      FROM playlist_tracks pt JOIN tracks t ON t.id=pt.track_id

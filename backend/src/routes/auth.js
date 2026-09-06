@@ -5,7 +5,6 @@ const jwt = require("jsonwebtoken");
 const { query, queryOne } = require("../db/pool");
 const authMiddleware = require("../middleware/auth");
 const { requireAdmin } = require("../middleware/auth");
-const driveService = require("../services/googleDrive");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
@@ -56,26 +55,6 @@ router.post("/register", authMiddleware, requireAdmin, async (req, res) => {
 
 // ── POST /api/auth/logout (stateless — client discards token) ────────────────
 router.post("/logout", (req, res) => res.json({ success: true }));
-
-// ── GET /api/auth/google/callback — Google Drive OAuth redirect target ───────
-router.get("/google/callback", async (req, res) => {
-  const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
-  const fail = (reason) => res.redirect(`${frontend}/settings?tab=integrations&drive=error&reason=${reason}`);
-
-  const { code, state, error } = req.query;
-  if (error || !code || !state) return fail(error || "missing_code");
-
-  const userId = driveService.verifyState(state);
-  if (!userId) return fail("bad_state");
-
-  try {
-    const tokens = await driveService.exchangeCode(code);
-    await driveService.saveTokens(userId, tokens);
-    res.redirect(`${frontend}/settings?tab=integrations&drive=connected`);
-  } catch (e) {
-    res.redirect(`${frontend}/settings?tab=integrations&drive=error&reason=exchange_failed`);
-  }
-});
 
 // ── GET /api/auth/me ─────────────────────────────────────────────────────────
 router.get("/me", authMiddleware, async (req, res) => {

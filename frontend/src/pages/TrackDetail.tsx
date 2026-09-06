@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, Edit2, Save, X, ExternalLink, Play, Pause,
-  Music2, Loader2, Plus, Trash2, Check, Sparkles
+  ArrowLeft, Edit2, Save, X, Play, Pause,
+  Loader2, Plus, Trash2, Check, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +99,7 @@ export default function TrackDetail() {
   );
 
   const isActive = player.track?.id === track.id;
-  const streamURL = track.google_drive_file_id || track.source === "local" ? streamUrl(track.id) : null;
+  const streamURL = track.local_file_path || track.source === "local" ? streamUrl(track.id) : null;
 
   const toggleGenre = (g: string) => {
     const curr = track.track_genres?.map((x: any) => x.genre) ?? [];
@@ -143,15 +143,6 @@ export default function TrackDetail() {
               >
                 {isActive && player.isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
               </button>
-            )}
-            {track.google_drive_file_id && (
-              <a
-                href={`https://drive.google.com/file/d/${track.google_drive_file_id}/view`}
-                target="_blank" rel="noreferrer"
-                className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-white/5 transition"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
             )}
             {editing ? (
               <>

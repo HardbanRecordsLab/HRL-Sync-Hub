@@ -14,7 +14,7 @@ router.get("/:token", async (req, res) => {
   if (link.expires_at && new Date(link.expires_at) < new Date()) return res.status(410).json({ error: "Expired" });
 
   const tracks = await queryAll(
-    `SELECT t.id,t.title,t.artist,t.duration,t.bpm,t.key,t.file_name,t.google_drive_file_id,
+    `SELECT t.id,t.title,t.artist,t.duration,t.bpm,t.key,t.file_name,
        pt.position,pt.track_comment
      FROM playlist_tracks pt JOIN tracks t ON t.id = pt.track_id
      WHERE pt.playlist_id = $1 ORDER BY pt.position`,
@@ -193,7 +193,7 @@ function toggle(){if(audio.paused){audio.play();document.getElementById('btn-pla
 function prev(){if(curIdx>0)play(curIdx-1);}
 function next(){if(curIdx+1<(playlist?.tracks?.length||0))play(curIdx+1);}
 function seek(e){const b=e.currentTarget;audio.currentTime=(e.offsetX/b.offsetWidth)*audio.duration;}
-function dl(){const t=playlist.tracks[curIdx];if(!t)return;const a=document.createElement('a');a.href=API+'/api/drive/stream/'+t.google_drive_file_id;a.download=t.file_name||t.title+'.mp3';a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function dl(){const t=playlist.tracks[curIdx];if(!t)return;const a=document.createElement('a');a.href=API+'/api/tracks/stream/'+t.id+'?shareToken='+TOKEN;a.download=t.file_name||t.title+'.mp3';a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);}
 
 load();
 </script>

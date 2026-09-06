@@ -37,14 +37,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ─── Google OAuth tokens per user ───────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS user_drive_tokens (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-  access_token  TEXT NOT NULL,
-  refresh_token TEXT,
-  expiry_date   BIGINT,
-  updated_at    TIMESTAMPTZ DEFAULT now()
-);
+-- Google Drive integration removed — audio lives in the object store only.
+DROP TABLE IF EXISTS user_drive_tokens;
 
 -- ─── Tracks ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tracks (
@@ -55,8 +49,7 @@ CREATE TABLE IF NOT EXISTS tracks (
   composer             TEXT,
   isrc                 TEXT,
   iswc                 TEXT,
-  google_drive_file_id TEXT,
-  local_file_path      TEXT,
+  local_file_path      TEXT,           -- object key in the storage bucket
   file_name            TEXT NOT NULL,
   file_size            BIGINT,
   mime_type            TEXT DEFAULT 'audio/mpeg',
@@ -66,12 +59,13 @@ CREATE TABLE IF NOT EXISTS tracks (
   description          TEXT,
   rights_type          rights_type,
   clearance_status     clearance_status DEFAULT 'not_cleared',
-  source               TEXT DEFAULT 'google_drive',
+  source               TEXT DEFAULT 'local',
   is_public            BOOLEAN DEFAULT false,
   created_at           TIMESTAMPTZ DEFAULT now(),
   updated_at           TIMESTAMPTZ DEFAULT now()
 );
-ALTER TABLE tracks ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+ALTER TABLE tracks         ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+ALTER TABLE tracks         DROP COLUMN IF EXISTS google_drive_file_id;
 
 CREATE TABLE IF NOT EXISTS track_genres (
   id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -113,14 +107,16 @@ CREATE TABLE IF NOT EXISTS track_rights (
 );
 
 CREATE TABLE IF NOT EXISTS track_versions (
-  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id             UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  version_type         TEXT NOT NULL,
-  google_drive_file_id TEXT,
-  file_name            TEXT NOT NULL,
-  file_size            BIGINT,
-  created_at           TIMESTAMPTZ DEFAULT now()
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  track_id        UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+  version_type    TEXT NOT NULL,
+  local_file_path TEXT,               -- object key for this version's file
+  file_name       TEXT NOT NULL,
+  file_size       BIGINT,
+  created_at      TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE track_versions DROP COLUMN IF EXISTS google_drive_file_id;
+ALTER TABLE track_versions ADD COLUMN IF NOT EXISTS local_file_path TEXT;
 
 -- ─── Lyrics ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lyrics (
@@ -135,8 +131,6 @@ CREATE TABLE IF NOT EXISTS lyrics (
   is_explicit            BOOLEAN DEFAULT false,
   is_public              BOOLEAN DEFAULT false,
   status                 lyrics_status DEFAULT 'draft',
-  google_doc_id          TEXT,
-  last_synced_from_drive TIMESTAMPTZ,
   timecodes              JSONB,
   copyright_notice       TEXT,
   publishing_info        JSONB,
@@ -144,6 +138,8 @@ CREATE TABLE IF NOT EXISTS lyrics (
   created_at             TIMESTAMPTZ DEFAULT now(),
   updated_at             TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE lyrics DROP COLUMN IF EXISTS google_doc_id;
+ALTER TABLE lyrics DROP COLUMN IF EXISTS last_synced_from_drive;
 
 CREATE TABLE IF NOT EXISTS lyrics_views (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -284,7 +280,6 @@ CREATE TABLE IF NOT EXISTS channel_tracks (
 -- ─── Indexes ────────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_tracks_user        ON tracks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tracks_created     ON tracks(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_tracks_drive_id    ON tracks(google_drive_file_id);
 CREATE INDEX IF NOT EXISTS idx_tracks_public      ON tracks(is_public);
 CREATE INDEX IF NOT EXISTS idx_tracks_title_trgm  ON tracks USING gin(title gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_tracks_artist_trgm ON tracks USING gin(artist gin_trgm_ops);

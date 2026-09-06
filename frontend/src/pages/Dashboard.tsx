@@ -79,10 +79,10 @@ export default function Dashboard() {
         {/* Quick links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in stagger-4">
           {[
-            { href: "/library", label: "Upload Audio",        desc: "Add to the VPS library" },
-            { href: "/pitches", label: "Send Pitch",          desc: "Create a playlist" },
-            { href: "/lyrics",  label: "Lyrics Catalog",      desc: "Manage lyrics" },
-            { href: "/drive",   label: "Import from Drive",   desc: "Optional source" },
+            { href: "/library", label: "Upload Audio",   desc: "Add to the library" },
+            { href: "/pitches", label: "Send Pitch",      desc: "Create a playlist" },
+            { href: "/lyrics",  label: "Lyrics Catalog",  desc: "Manage lyrics" },
+            { href: "/contacts", label: "Contacts",       desc: "Supervisors & clients" },
           ].map(({ href, label, desc }) => (
             <a key={href} href={href} className="hrl-card p-4 block hover:border-violet-500/30 transition group">
               <p className="font-medium text-sm group-hover:text-violet-400 transition mb-1">{label}</p>

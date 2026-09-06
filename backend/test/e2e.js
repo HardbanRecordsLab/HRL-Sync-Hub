@@ -43,7 +43,9 @@ function loadSchema(db) {
     .replace(/\bstatus\s+project_status/gi, "status text")
     .replace(/\bINET\b/gi, "text")
     .replace(/\b(decimal|numeric|varchar|char)\s*\([^)]*\)/gi, "$1")
-    .replace(/ALTER TABLE tracks ADD COLUMN IF NOT EXISTS[^;]*;/gi, "");
+    // idempotency ALTERs / DROPs — no-ops on a fresh in-memory DB
+    .replace(/ALTER TABLE [\s\S]*?;/gi, "")
+    .replace(/DROP TABLE IF EXISTS[^;]*;/gi, "");
   db.public.none(sql);
 }
 

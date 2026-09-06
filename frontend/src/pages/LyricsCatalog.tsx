@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  FileText, Plus, Globe, Lock, RefreshCw, Edit2, Trash2,
-  ExternalLink, Eye, Search, Music2, Loader2,
+  FileText, Plus, Globe, Lock, Edit2, Trash2, Eye, Search, Music2, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import Layout from "@/components/Layout";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useSearchParams } from "react-router-dom";
 
 const LANGS = [
   { v: "en", l: "EN" }, { v: "pl", l: "PL" }, { v: "de", l: "DE" }, { v: "fr", l: "FR" },
@@ -39,8 +36,6 @@ interface LyricsEntry {
   is_explicit: boolean;
   is_public: boolean;
   status: "draft" | "final" | "archived";
-  google_doc_id?: string;
-  last_synced_from_drive?: string;
   created_at: string;
   copyright_notice?: string;
   notes?: string;
@@ -51,29 +46,17 @@ interface LyricsEntry {
 const EMPTY_FORM = {
   title: "", artist: "", content: "", language: "en",
   is_explicit: false, is_public: false, status: "draft",
-  google_doc_id: "", copyright_notice: "", notes: "",
+  copyright_notice: "", notes: "",
 };
 
 export default function LyricsCatalog() {
   const qc = useQueryClient();
-  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<LyricsEntry | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-
-  // Pre-fill from a Drive doc import (?docId=&docName=)
-  useEffect(() => {
-    const docId = searchParams.get("docId");
-    const docName = searchParams.get("docName");
-    if (docId) {
-      setForm((f) => ({ ...f, google_doc_id: docId, title: docName ?? "" }));
-      setOpen(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const { data: lyrics = [], isLoading } = useQuery<LyricsEntry[]>({
     queryKey: ["lyrics", search, statusFilter],
@@ -94,10 +77,8 @@ export default function LyricsCatalog() {
   });
 
   const saveMut = useMutation({
-    mutationFn: () => {
-      const payload = { ...form, google_doc_id: form.google_doc_id || null };
-      return editing ? api.put(`/api/lyrics/${editing.id}`, payload) : api.post("/api/lyrics", payload);
-    },
+    mutationFn: () =>
+      editing ? api.put(`/api/lyrics/${editing.id}`, form) : api.post("/api/lyrics", form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lyrics"] });
       setOpen(false);
@@ -114,12 +95,6 @@ export default function LyricsCatalog() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const syncMut = useMutation({
-    mutationFn: (entry: LyricsEntry) => api.post(`/api/lyrics/${entry.id}/sync-with-drive`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["lyrics"] }); toast.success("Synced from Google Doc"); },
-    onError: (e: any) => toast.error(e.message || "Sync failed"),
-  });
-
   const openEdit = async (entry: LyricsEntry) => {
     let full = entry;
     try {
@@ -129,7 +104,7 @@ export default function LyricsCatalog() {
     setForm({
       title: full.title, artist: full.artist ?? "", content: full.content ?? "",
       language: full.language, is_explicit: full.is_explicit, is_public: full.is_public,
-      status: full.status, google_doc_id: full.google_doc_id ?? "",
+      status: full.status,
       copyright_notice: full.copyright_notice ?? "", notes: full.notes ?? "",
     });
     setOpen(true);
@@ -144,7 +119,7 @@ export default function LyricsCatalog() {
           <div>
             <h1 className="hrl-title text-5xl mb-1">LYRICS</h1>
             <p className="hrl-label text-muted-foreground">
-              {lyrics.length} entr{lyrics.length !== 1 ? "ies" : "y"} · sync with Google Docs
+              {lyrics.length} entr{lyrics.length !== 1 ? "ies" : "y"}
             </p>
           </div>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(EMPTY_FORM); } }}>
@@ -172,18 +147,8 @@ export default function LyricsCatalog() {
                   <Textarea
                     value={form.content}
                     onChange={(e) => f("content", e.target.value)}
-                    placeholder="Paste lyrics here, or link a Google Doc below and sync…"
-                    className="min-h-[180px] font-mono text-sm leading-relaxed"
-                  />
-                </div>
-
-                <div>
-                  <Label className="hrl-label mb-1.5 block">Google Doc ID (optional)</Label>
-                  <Input
-                    value={form.google_doc_id}
-                    onChange={(e) => f("google_doc_id", e.target.value)}
-                    placeholder="Doc ID from docs.google.com/document/d/[ID]/edit"
-                    className="font-mono text-sm"
+                    placeholder="Paste the lyrics here…"
+                    className="min-h-[200px] font-mono text-sm leading-relaxed"
                   />
                 </div>
 
@@ -266,7 +231,7 @@ export default function LyricsCatalog() {
           <div className="text-center py-16">
             <FileText className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
             <p className="hrl-title text-2xl text-muted-foreground mb-2">NO LYRICS</p>
-            <p className="hrl-label text-muted-foreground">Add manually or sync from a Google Doc</p>
+            <p className="hrl-label text-muted-foreground">Paste lyrics in — one entry per song</p>
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -299,15 +264,6 @@ export default function LyricsCatalog() {
                   )}
                 </div>
 
-                {entry.google_doc_id && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-blue-400 mb-3 font-mono">
-                    <RefreshCw className="w-2.5 h-2.5" />
-                    {entry.last_synced_from_drive
-                      ? `Synced ${formatDistanceToNow(new Date(entry.last_synced_from_drive), { addSuffix: true })}`
-                      : "Google Doc linked"}
-                  </div>
-                )}
-
                 <div className="flex items-center gap-1 pt-3 border-t border-border/50">
                   <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-white/5 transition" onClick={() => setViewingId(entry.id)} title="View">
                     <Eye className="w-3.5 h-3.5" />
@@ -315,24 +271,6 @@ export default function LyricsCatalog() {
                   <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-white/5 transition" onClick={() => openEdit(entry)} title="Edit">
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                  {entry.google_doc_id && (
-                    <>
-                      <button
-                        className="p-1.5 rounded text-muted-foreground hover:text-blue-400 hover:bg-blue-500/8 transition"
-                        onClick={() => syncMut.mutate(entry)} title="Sync from Doc"
-                        disabled={syncMut.isPending}
-                      >
-                        <RefreshCw className={cn("w-3.5 h-3.5", syncMut.isPending && "animate-spin")} />
-                      </button>
-                      <button
-                        className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-white/5 transition"
-                        onClick={() => window.open(`https://docs.google.com/document/d/${entry.google_doc_id}`, "_blank")}
-                        title="Open in Drive"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  )}
                   <button
                     className="p-1.5 rounded text-muted-foreground hover:text-violet-400 hover:bg-violet-500/8 transition ml-auto"
                     onClick={() => { if (confirm("Delete?")) deleteMut.mutate(entry.id); }}
@@ -356,7 +294,7 @@ export default function LyricsCatalog() {
             </DialogTitle>
           </DialogHeader>
           <pre className="whitespace-pre-wrap font-mono text-sm leading-loose mt-3 text-foreground/90">
-            {viewing?.content || "No content — sync from Google Doc or add manually."}
+            {viewing?.content || "No content yet."}
           </pre>
         </DialogContent>
       </Dialog>
