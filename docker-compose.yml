@@ -67,8 +67,10 @@ services:
       - "${API_PORT:-3001}:3001"
     volumes:
       - hrl_staging:/app/uploads
+      - hrl_logs:/app/logs
 
 volumes:
   hrl_pgdata:
   hrl_minio:
   hrl_staging:
+  hrl_logs:

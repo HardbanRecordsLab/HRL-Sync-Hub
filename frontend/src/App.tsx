@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,27 +6,36 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PlayerProvider } from "@/components/player/PlayerProvider";
-
-import Dashboard from "./pages/Dashboard";
-import Library from "./pages/Library";
-import TrackDetail from "./pages/TrackDetail";
-import Pitches from "./pages/Pitches";
-import PlaylistDetail from "./pages/PlaylistDetail";
-import SharedPlaylist from "./pages/SharedPlaylist";
-import Contacts from "./pages/Contacts";
-import Projects from "./pages/Projects";
-import Analytics from "./pages/Analytics";
-import Settings from "./pages/Settings";
-import LyricsCatalog from "./pages/LyricsCatalog";
-import GoogleDrive from "./pages/GoogleDrive";
-import BusinessHub from "./pages/BusinessHub";
-import PublicLibrary from "./pages/PublicLibrary";
 import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
+
+// Route-level code splitting — only the login screen ships in the entry bundle.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Library = lazy(() => import("./pages/Library"));
+const TrackDetail = lazy(() => import("./pages/TrackDetail"));
+const Pitches = lazy(() => import("./pages/Pitches"));
+const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
+const SharedPlaylist = lazy(() => import("./pages/SharedPlaylist"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Projects = lazy(() => import("./pages/Projects"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Settings = lazy(() => import("./pages/Settings"));
+const LyricsCatalog = lazy(() => import("./pages/LyricsCatalog"));
+const GoogleDrive = lazy(() => import("./pages/GoogleDrive"));
+const BusinessHub = lazy(() => import("./pages/BusinessHub"));
+const PublicLibrary = lazy(() => import("./pages/PublicLibrary"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
+
+function Spinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 
 function Protected({ children }: { children: JSX.Element }) {
   const { isAuthenticated } = useAuth();
@@ -35,16 +45,11 @@ function Protected({ children }: { children: JSX.Element }) {
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return <Spinner />;
 
   return (
     <BrowserRouter>
+      <Suspense fallback={<Spinner />}>
       <Routes>
         <Route path="/" element={isAuthenticated ? <Dashboard /> : <Auth />} />
 
@@ -67,6 +72,7 @@ function AppRoutes() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

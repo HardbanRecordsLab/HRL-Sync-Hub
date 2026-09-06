@@ -1,5 +1,17 @@
 require("express-async-errors");
 
+// ── Error tracking (optional — only active when SENTRY_DSN is set) ───────────
+let Sentry = null;
+if (process.env.SENTRY_DSN) {
+  Sentry = require("@sentry/node");
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "production",
+    tracesSampleRate: 0,
+    release: require("../package.json").version,
+  });
+}
+
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -59,6 +71,7 @@ app.use(
 app.use("/api/", RateLimitManager.getGlobalLimiter());
 app.use("/api/auth/login", RateLimitManager.getAuthLimiter());
 app.use("/api/auth/register", RateLimitManager.getAuthLimiter());
+app.use("/api/tracks/upload", RateLimitManager.getUploadLimiter());
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -120,6 +133,8 @@ app.post("/api/ai/analyze-track/:id", authMiddleware, async (req, res) => {
 });
 
 app.use("*", (req, res) => res.status(404).json({ error: "Not found" }));
+
+if (Sentry) Sentry.setupExpressErrorHandler(app); // reports 5xx before our handler responds
 app.use(errorHandler);
 
 module.exports = { app, allowedOrigins };
