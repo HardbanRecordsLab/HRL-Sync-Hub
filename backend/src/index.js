@@ -24,11 +24,18 @@ const PORT = process.env.PORT || 3001;
   } catch (err) {
     logger.error(`Schema migration failed — starting anyway, /health will report degraded: ${err.message}`);
   }
-  try {
-    await objectStore.ensureReady();
-    logger.info(`📦 Object storage ready (driver: ${objectStore.driver}, bucket: ${objectStore.bucket})`);
-  } catch (err) {
-    logger.error(`Object storage not reachable (driver: ${objectStore.driver}): ${err.message}`);
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await objectStore.ensureReady();
+      logger.info(`📦 Object storage ready (driver: ${objectStore.driver}, bucket: ${objectStore.bucket})`);
+      break;
+    } catch (err) {
+      if (attempt === 5) {
+        logger.error(`Object storage not reachable after 5 tries (driver: ${objectStore.driver}): ${err.message}`);
+      } else {
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
+      }
+    }
   }
   app.listen(PORT, "0.0.0.0", () => {
     logger.info(`🎵 HRL Sync API — port ${PORT} | env: ${process.env.NODE_ENV || "development"}`);

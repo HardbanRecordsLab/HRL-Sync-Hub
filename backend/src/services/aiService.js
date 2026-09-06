@@ -1,27 +1,61 @@
 /**
- * AI service via OpenRouter (OpenAI-compatible). Fully optional.
+ * AI via OpenRouter (OpenAI-compatible). Fully optional.
  *
  *   OPENROUTER_API_KEY   — required to enable AI features
  *   AI_MODELS            — comma-separated model ids, tried in order.
- *                          Default: free models first, one cheap paid fallback.
- *
- * Free ":free" models rate-limit / go offline often, so we walk the list until
- * one answers.
+ *                          If unset, the live free-model list is fetched from
+ *                          OpenRouter and cached, so it self-heals as the
+ *                          catalogue changes.
  */
 const { logger } = require("../utils/logger");
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+const BASE = "https://openrouter.ai/api/v1";
 
-const DEFAULT_MODELS = [
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "deepseek/deepseek-chat-v3-0324:free",
-  "google/gemini-2.0-flash-exp:free",
-  "google/gemini-2.0-flash-001", // cheap, fast, reliable JSON — paid fallback
+// Last-resort static list (used only if the live fetch fails).
+const STATIC_FALLBACK = [
+  "google/gemma-4-31b-it:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "minimax/minimax-m3:free",
+  "deepseek/deepseek-chat",
 ];
 
-function models() {
+// Families that reliably follow instructions / emit clean JSON, best first.
+const PREFERRED = ["google/gemma", "nvidia/nemotron-3-super", "nvidia/nemotron-3-ultra", "minimax/minimax-m3", "meta-llama/llama", "qwen/", "deepseek/", "mistralai/"];
+
+let _cache = { at: 0, list: null };
+
+function headers() {
+  return {
+    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": process.env.API_URL || "https://hrl-sync.hardbanrecordslab.online",
+    "X-Title": "HRL Sync Hub",
+  };
+}
+
+async function discoverModels() {
+  if (_cache.list && Date.now() - _cache.at < 3600_000) return _cache.list;
+  try {
+    const res = await fetch(`${BASE}/models`, { headers: headers() });
+    const data = (await res.json()).data || [];
+    const free = data.map((m) => m.id).filter((id) => id.endsWith(":free"));
+    const score = (id) => {
+      const i = PREFERRED.findIndex((p) => id.startsWith(p));
+      return i === -1 ? 99 : i;
+    };
+    const list = [...free.sort((a, b) => score(a) - score(b)).slice(0, 4), "deepseek/deepseek-chat"];
+    _cache = { at: Date.now(), list };
+    logger.info(`AI: discovered models → ${list.join(", ")}`);
+    return list;
+  } catch (e) {
+    logger.warn(`AI: model discovery failed (${e.message}), using static fallback`);
+    return STATIC_FALLBACK;
+  }
+}
+
+async function models() {
   const env = (process.env.AI_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  return env.length ? env : DEFAULT_MODELS;
+  return env.length ? env : discoverModels();
 }
 
 class AIService {
@@ -30,8 +64,7 @@ class AIService {
   }
 
   async chat(prompt, system = "You are a music supervisor and metadata expert for a sync-licensing library.") {
-    const key = process.env.OPENROUTER_API_KEY;
-    if (!key) {
+    if (!process.env.OPENROUTER_API_KEY) {
       const err = new Error("AI_NOT_CONFIGURED");
       err.status = 503;
       throw err;
@@ -46,16 +79,11 @@ class AIService {
     };
 
     let lastErr;
-    for (const model of models()) {
+    for (const model of await models()) {
       try {
-        const res = await fetch(ENDPOINT, {
+        const res = await fetch(`${BASE}/chat/completions`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": process.env.API_URL || "https://hrl-sync.hardbanrecordslab.online",
-            "X-Title": "HRL Sync Hub",
-          },
+          headers: headers(),
           body: JSON.stringify({ ...body, model }),
         });
         if (!res.ok) {
@@ -63,8 +91,7 @@ class AIService {
           logger.warn(`AI: ${lastErr.message}, trying next model`);
           continue;
         }
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content;
+        const text = (await res.json()).choices?.[0]?.message?.content;
         if (text) return text;
         lastErr = new Error(`${model} → empty response`);
       } catch (e) {
@@ -96,7 +123,7 @@ Reply with ONLY strict JSON: {"genres":["..","..",".."],"moods":["..",".."]}`;
       };
     } catch (e) {
       logger.warn("AI mood/genre detection failed: " + e.message);
-      return { genres: [], moods: [] };
+      return { genres: [], moods: [], error: e.message };
     }
   }
 

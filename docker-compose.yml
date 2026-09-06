@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
     depends_on:
       minio:
-        condition: service_started
+        condition: service_healthy
     env_file:
       - ./.env
     environment:
