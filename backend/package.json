@@ -1,6 +1,6 @@
 {
   "name": "hrl-sync-api",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "HRL Sync — Hardban Records Lab API (Express + PostgreSQL)",
   "main": "src/index.js",
   "scripts": {
