@@ -140,7 +140,7 @@ export default function GoogleDrive() {
             </Button>
             <Button
               variant="outline" size="sm"
-              className="hrl-label h-8 text-red-400 border-red-500/30 hover:bg-red-500/10"
+              className="hrl-label h-8 text-violet-400 border-violet-500/30 hover:bg-violet-500/10"
               onClick={() => disconnect.mutate()}
             >
               <X className="w-3 h-3 mr-1.5" /> Disconnect
@@ -155,8 +155,8 @@ export default function GoogleDrive() {
         )}
 
         {selected.size > 0 && (
-          <div className="flex items-center justify-between p-3 rounded border border-red-500/30 bg-red-500/8">
-            <span className="hrl-label text-red-400">{selected.size} file{selected.size !== 1 ? "s" : ""} selected</span>
+          <div className="flex items-center justify-between p-3 rounded border border-violet-500/30 bg-violet-500/8">
+            <span className="hrl-label text-violet-400">{selected.size} file{selected.size !== 1 ? "s" : ""} selected</span>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelected(new Set())}>Clear</Button>
               <Button size="sm" className="hrl-btn-primary h-7 text-xs" onClick={importSelected}>
@@ -169,7 +169,7 @@ export default function GoogleDrive() {
         {importProg && (
           <div className="hrl-card p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500" />
               <span className="hrl-label">Importing {importProg.done}/{importProg.total}…</span>
             </div>
             <Progress value={(importProg.done / importProg.total) * 100} className="h-1" />
@@ -237,16 +237,16 @@ export default function GoogleDrive() {
                         key={f.id}
                         className={cn(
                           "flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 cursor-pointer transition-colors",
-                          isSel ? "bg-red-500/8" : "hover:bg-white/3"
+                          isSel ? "bg-violet-500/8" : "hover:bg-white/3"
                         )}
                         onClick={() => toggleSelect(f.id)}
                       >
-                        <div className={cn("w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors", isSel ? "bg-red-500 border-red-500" : "border-border")}>
+                        <div className={cn("w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors", isSel ? "bg-violet-500 border-violet-500" : "border-border")}>
                           {isSel && <Check className="w-2.5 h-2.5 text-white" />}
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); previewAudio(f); }}
-                          className={cn("w-7 h-7 rounded flex items-center justify-center shrink-0 transition", isPlaying ? "bg-red-500/20 text-red-400" : "text-muted-foreground hover:text-foreground hover:bg-white/5")}
+                          className={cn("w-7 h-7 rounded flex items-center justify-center shrink-0 transition", isPlaying ? "bg-violet-500/20 text-violet-400" : "text-muted-foreground hover:text-foreground hover:bg-white/5")}
                         >
                           <Play className="w-3.5 h-3.5 ml-0.5" />
                         </button>
@@ -275,7 +275,7 @@ export default function GoogleDrive() {
                     <div key={f.id} className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0">
                       <FileText className="w-4 h-4 text-blue-400 shrink-0" />
                       <p className="flex-1 text-sm truncate">{f.name}</p>
-                      <a href={`/lyrics?docId=${f.id}&docName=${encodeURIComponent(f.name)}`} className="hrl-label text-red-400 hover:text-red-300 transition text-[10px]">
+                      <a href={`/lyrics?docId=${f.id}&docName=${encodeURIComponent(f.name)}`} className="hrl-label text-violet-400 hover:text-violet-300 transition text-[10px]">
                         IMPORT LYRICS
                       </a>
                       <a href={`https://docs.google.com/document/d/${f.id}/edit`} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground transition">

@@ -51,7 +51,7 @@ export default function SharedPlaylist() {
   if (isLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center overflow-hidden rounded-xl">
+        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center overflow-hidden rounded-xl bg-white/95 p-1.5">
           <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
         </div>
         <p className="hrl-label text-muted-foreground">Loading…</p>
@@ -81,7 +81,7 @@ export default function SharedPlaylist() {
             <h1 className="hrl-title text-4xl">{playlist.name}</h1>
             {playlist.description && <p className="text-sm text-muted-foreground mt-1">{playlist.description}</p>}
           </div>
-          <div className="w-20 h-20 flex items-center justify-center overflow-hidden rounded-xl">
+          <div className="w-16 h-16 flex items-center justify-center overflow-hidden rounded-xl bg-white/95 p-1.5">
             <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function SharedPlaylist() {
                 className={cn(
                   "flex items-center gap-4 px-4 py-3 rounded-md cursor-pointer transition-colors",
                   !hasAudio && "opacity-50 cursor-default",
-                  isActive ? "bg-red-500/10 border border-red-500/20" : "hover:bg-white/4"
+                  isActive ? "bg-violet-500/10 border border-violet-500/20" : "hover:bg-white/4"
                 )}
                 onClick={() => hasAudio && playTrack(track, tracks)}
               >
@@ -108,10 +108,10 @@ export default function SharedPlaylist() {
                 <div className="w-8 flex items-center justify-center shrink-0">
                   {isActive && player.isPlaying ? (
                     <span className="flex gap-px items-end h-3">
-                      {[1,2,3].map(b => <span key={b} className="w-px bg-red-500 animate-pulse-red rounded-full" style={{ height: `${4+b*2}px` }} />)}
+                      {[1,2,3].map(b => <span key={b} className="w-px bg-violet-500 animate-pulse-red rounded-full" style={{ height: `${4+b*2}px` }} />)}
                     </span>
                   ) : isActive ? (
-                    <Play className="w-3.5 h-3.5 text-red-400" />
+                    <Play className="w-3.5 h-3.5 text-violet-400" />
                   ) : (
                     <span className="hrl-label text-muted-foreground">{String(i+1).padStart(2,"0")}</span>
                   )}
@@ -119,7 +119,7 @@ export default function SharedPlaylist() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-medium truncate", isActive && "text-red-400")}>{track.title}</p>
+                  <p className={cn("text-sm font-medium truncate", isActive && "text-violet-400")}>{track.title}</p>
                   <p className="hrl-label text-muted-foreground">{track.artist}</p>
                 </div>
 
@@ -157,7 +157,7 @@ export default function SharedPlaylist() {
             }}
           >
             <div className="absolute inset-0 bg-white/5" />
-            <div className="absolute top-0 left-0 h-full bg-red-500" style={{ width: `${pct}%` }} />
+            <div className="absolute top-0 left-0 h-full bg-violet-500" style={{ width: `${pct}%` }} />
           </div>
 
           <div className="max-w-2xl mx-auto flex items-center gap-5 px-6 h-[70px]">
@@ -169,7 +169,7 @@ export default function SharedPlaylist() {
               <button onClick={player.prev} className="text-muted-foreground hover:text-foreground transition p-1.5"><SkipBack className="w-4 h-4" /></button>
               <button
                 onClick={player.toggle}
-                className="w-9 h-9 rounded-full bg-red-500 hover:bg-red-400 transition flex items-center justify-center"
+                className="w-9 h-9 rounded-full bg-violet-500 hover:bg-violet-400 transition flex items-center justify-center"
               >
                 {player.isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
               </button>
@@ -183,7 +183,7 @@ export default function SharedPlaylist() {
       {/* Footer */}
       <div className="text-center py-4 border-t border-border/50">
         <p className="hrl-label text-muted-foreground">
-          Powered by <a href="https://hardbanrecordslab.online" target="_blank" rel="noreferrer" className="text-red-500/70 hover:text-red-400 transition">HRL SYNC</a>
+          Powered by <a href="https://hardbanrecordslab.online" target="_blank" rel="noreferrer" className="text-violet-500/70 hover:text-violet-400 transition">HRL SYNC</a>
         </p>
       </div>
     </div>

@@ -63,12 +63,12 @@ export function AudioPlayerBar({ player }: Props) {
       >
         <div className="absolute inset-0 bg-white/5" />
         <div
-          className="absolute top-0 left-0 h-full bg-red-500 transition-all"
+          className="absolute top-0 left-0 h-full bg-violet-500 transition-all"
           style={{ width: `${pct}%` }}
         />
         {/* scrubber dot */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-violet-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
           style={{ left: `calc(${pct}% - 6px)` }}
         />
         {/* hover tooltip */}
@@ -105,7 +105,7 @@ export function AudioPlayerBar({ player }: Props) {
           </button>
           <button
             onClick={toggle}
-            className="w-9 h-9 rounded-full bg-red-500 hover:bg-red-400 transition flex items-center justify-center shadow-md"
+            className="w-9 h-9 rounded-full bg-violet-500 hover:bg-violet-400 transition flex items-center justify-center shadow-md"
           >
             {isLoading
               ? <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -135,7 +135,7 @@ export function AudioPlayerBar({ player }: Props) {
           <input
             type="range" min={0} max={1} step={0.01} value={isMuted ? 0 : volume}
             onChange={e => setVolume(parseFloat(e.target.value))}
-            className="w-full h-1 accent-red-500 cursor-pointer"
+            className="w-full h-1 accent-violet-500 cursor-pointer"
           />
         </div>
 
@@ -161,7 +161,7 @@ export function AudioPlayerBar({ player }: Props) {
           <a
             href={track.fileUrl}
             target="_blank" rel="noreferrer"
-            className="hrl-label text-red-500 hover:text-red-400 transition ml-auto"
+            className="hrl-label text-violet-500 hover:text-violet-400 transition ml-auto"
           >
             OPEN IN DRIVE ↗
           </a>

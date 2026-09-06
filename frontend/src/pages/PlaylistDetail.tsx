@@ -80,7 +80,7 @@ export default function PlaylistDetail() {
             {(playlist?.tracks?.length ?? 0) > 0 && (
               <button
                 onClick={playAll}
-                className="w-9 h-9 rounded-full bg-red-500 hover:bg-red-400 transition flex items-center justify-center"
+                className="w-9 h-9 rounded-full bg-violet-500 hover:bg-violet-400 transition flex items-center justify-center"
               >
                 <Play className="w-4 h-4 text-white ml-0.5" />
               </button>
@@ -139,7 +139,7 @@ export default function PlaylistDetail() {
                   className={cn(
                     "grid items-center px-4 py-3 border-b border-border/50 last:border-0 group cursor-pointer transition-colors",
                     "hover:bg-white/3",
-                    isActive && "bg-red-500/8"
+                    isActive && "bg-violet-500/8"
                   )}
                   style={{ gridTemplateColumns: "28px 28px 1fr 80px 60px 60px 36px" }}
                   onClick={() => {
@@ -154,17 +154,17 @@ export default function PlaylistDetail() {
                   <div className="flex items-center justify-center">
                     {isActive && player.isPlaying ? (
                       <span className="flex gap-px items-end h-3">
-                        {[1,2,3].map(b => <span key={b} className="w-px bg-red-500 animate-pulse-red rounded-full" style={{ height: `${4+b*2}px` }} />)}
+                        {[1,2,3].map(b => <span key={b} className="w-px bg-violet-500 animate-pulse-red rounded-full" style={{ height: `${4+b*2}px` }} />)}
                       </span>
                     ) : (
                       <>
                         <span className={cn("hrl-label text-muted-foreground", hasAudio && "group-hover:hidden")}>{i + 1}</span>
-                        {hasAudio && <Play className="w-3 h-3 text-red-400 hidden group-hover:block" />}
+                        {hasAudio && <Play className="w-3 h-3 text-violet-400 hidden group-hover:block" />}
                       </>
                     )}
                   </div>
                   <div className="min-w-0 pr-2">
-                    <p className={cn("text-sm font-medium truncate", isActive && "text-red-400")}>{track.title}</p>
+                    <p className={cn("text-sm font-medium truncate", isActive && "text-violet-400")}>{track.title}</p>
                     <p className="hrl-label text-muted-foreground truncate">{track.artist}</p>
                     {track.track_comment && <p className="hrl-label text-muted-foreground italic">{track.track_comment}</p>}
                   </div>
@@ -175,7 +175,7 @@ export default function PlaylistDetail() {
                   <span className="mono text-sm text-muted-foreground">{fmt(track.duration)}</span>
                   <button
                     onClick={e => { e.stopPropagation(); if (confirm("Remove from playlist?")) removeMut.mutate(track.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition p-1 rounded"
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-violet-400 transition p-1 rounded"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

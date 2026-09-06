@@ -168,7 +168,7 @@ export default function Pitches() {
                 <div key={pl.id} className={cn("hrl-card p-4 animate-fade-in", `stagger-${Math.min(i+1,5)}`)}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 shrink-0 rounded border border-border bg-card flex items-center justify-center">
-                      <Radio className="w-4 h-4 text-red-500" />
+                      <Radio className="w-4 h-4 text-violet-500" />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -201,7 +201,7 @@ export default function Pitches() {
                         className={cn(
                           "p-1.5 rounded transition",
                           shareOpen === pl.id
-                            ? "text-red-400 bg-red-500/10"
+                            ? "text-violet-400 bg-violet-500/10"
                             : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                         )}
                       >
@@ -209,7 +209,7 @@ export default function Pitches() {
                       </button>
                       <button
                         onClick={() => { if (confirm("Delete playlist?")) deleteMut.mutate(pl.id); }}
-                        className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition"
+                        className="p-1.5 rounded text-muted-foreground hover:text-violet-400 hover:bg-violet-500/8 transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -244,7 +244,7 @@ export default function Pitches() {
                               </button>
                               <button
                                 onClick={() => deactivateLinkMut.mutate(link.id)}
-                                className="text-muted-foreground hover:text-red-400 transition"
+                                className="text-muted-foreground hover:text-violet-400 transition"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>

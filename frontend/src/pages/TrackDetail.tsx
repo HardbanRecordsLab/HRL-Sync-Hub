@@ -138,7 +138,7 @@ export default function TrackDetail() {
                 onClick={() => player.play({ id: track.id, title: track.title, artist: track.artist, fileUrl: streamURL, bpm: track.bpm, key: track.key })}
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center transition",
-                  isActive && player.isPlaying ? "bg-red-500/20 text-red-400" : "bg-red-500 text-white hover:bg-red-400"
+                  isActive && player.isPlaying ? "bg-violet-500/20 text-violet-400" : "bg-violet-500 text-white hover:bg-violet-400"
                 )}
               >
                 {isActive && player.isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
@@ -167,7 +167,7 @@ export default function TrackDetail() {
             )}
             <Button
               variant="outline" size="sm"
-              className="h-8 text-xs hrl-label border-red-500/30 text-red-400 hover:bg-red-500/10"
+              className="h-8 text-xs hrl-label border-violet-500/30 text-violet-400 hover:bg-violet-500/10"
               onClick={() => aiMut.mutate()}
               disabled={aiMut.isPending}
             >
@@ -242,7 +242,7 @@ export default function TrackDetail() {
                     <button
                       key={g}
                       onClick={() => toggleGenre(g)}
-                      className={cn("px-3 py-1 rounded text-xs transition", active ? "hrl-badge-red" : "hrl-badge-dim hover:border-red-500/30")}
+                      className={cn("px-3 py-1 rounded text-xs transition", active ? "hrl-badge-red" : "hrl-badge-dim hover:border-violet-500/30")}
                     >
                       {active && <Check className="w-2.5 h-2.5 inline mr-1" />}{g}
                     </button>
@@ -261,7 +261,7 @@ export default function TrackDetail() {
                     <button
                       key={m}
                       onClick={() => toggleMood(m)}
-                      className={cn("px-3 py-1 rounded text-xs transition", active ? "hrl-badge-red" : "hrl-badge-dim hover:border-red-500/30")}
+                      className={cn("px-3 py-1 rounded text-xs transition", active ? "hrl-badge-red" : "hrl-badge-dim hover:border-violet-500/30")}
                     >
                       {active && <Check className="w-2.5 h-2.5 inline mr-1" />}{m}
                     </button>

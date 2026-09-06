@@ -38,7 +38,7 @@ export default function Analytics() {
 
   const STAT_CARDS = [
     { label: "Playlist Opens",    value: overview?.totals.total_opens      ?? 0, icon: Eye,       color: "#60a5fa" },
-    { label: "Track Plays",       value: overview?.totals.total_plays      ?? 0, icon: Play,       color: "#FF3C50" },
+    { label: "Track Plays",       value: overview?.totals.total_plays      ?? 0, icon: Play,       color: "#8b5cf6" },
     { label: "Downloads",         value: overview?.totals.total_downloads  ?? 0, icon: Download,   color: "#34d399" },
     { label: "Unique Visitors",   value: overview?.totals.unique_visitors  ?? 0, icon: Users,      color: "#a78bfa" },
   ];
@@ -79,7 +79,7 @@ export default function Analytics() {
             {/* Sparkline — last 30 days */}
             <div className="hrl-card p-5 animate-fade-in stagger-2">
               <div className="flex items-center gap-2 mb-5">
-                <TrendingUp className="w-3.5 h-3.5 text-red-500" />
+                <TrendingUp className="w-3.5 h-3.5 text-violet-500" />
                 <h2 className="hrl-title text-xl">LAST 30 DAYS — PLAYS</h2>
               </div>
               <div className="flex items-end gap-0.5 h-16">
@@ -89,7 +89,7 @@ export default function Analytics() {
                     <div key={d.date} className="group relative flex-1 flex items-end">
                       <div
                         className="w-full rounded-sm transition-all"
-                        style={{ height: `${h}px`, background: d.plays > 0 ? "#FF3C50" : "rgba(255,255,255,0.06)" }}
+                        style={{ height: `${h}px`, background: d.plays > 0 ? "#8b5cf6" : "rgba(255,255,255,0.06)" }}
                       />
                       <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
                         <div className="bg-card border border-border rounded px-2 py-1 text-[10px] mono whitespace-nowrap">
@@ -120,10 +120,10 @@ export default function Analytics() {
                           <p className="text-sm font-medium truncate">{pl.name}</p>
                           <div className="flex gap-3 ml-2 shrink-0">
                             <span className="hrl-label text-muted-foreground">{pl.opens} opens</span>
-                            <span className="hrl-label" style={{ color: "#FF3C50" }}>{pl.plays} plays</span>
+                            <span className="hrl-label" style={{ color: "#8b5cf6" }}>{pl.plays} plays</span>
                           </div>
                         </div>
-                        <Bar value={pl.plays} max={overview!.topPlaylists[0].plays} color="#FF3C50" />
+                        <Bar value={pl.plays} max={overview!.topPlaylists[0].plays} color="#8b5cf6" />
                       </div>
                     ))}
                   </div>
@@ -144,7 +144,7 @@ export default function Analytics() {
                           <p className="text-sm font-medium truncate leading-tight">{t.title}</p>
                           <p className="hrl-label text-muted-foreground">{t.artist}</p>
                         </div>
-                        <span className="hrl-label" style={{ color: "#FF3C50" }}>{t.play_count}</span>
+                        <span className="hrl-label" style={{ color: "#8b5cf6" }}>{t.play_count}</span>
                       </div>
                     ))}
                   </div>

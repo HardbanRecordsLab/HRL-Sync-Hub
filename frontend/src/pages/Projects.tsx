@@ -151,7 +151,7 @@ export default function Projects() {
                         </span>
                         <button
                           onClick={() => { if (confirm("Delete?")) deleteMut.mutate(p.id); }}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition"
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-violet-400 transition"
                         >
                           ×
                         </button>

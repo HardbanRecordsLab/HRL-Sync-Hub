@@ -194,7 +194,7 @@ export default function Library() {
                   key={track.id}
                   className={cn(
                     "grid items-center px-4 py-3 border-b border-border/50 last:border-0 cursor-pointer group transition-colors hover:bg-white/3",
-                    isActive && "bg-red-500/8"
+                    isActive && "bg-violet-500/8"
                   )}
                   style={{ gridTemplateColumns: "32px 1fr 120px 80px 80px 80px 40px" }}
                   onClick={() => handlePlay(track)}
@@ -203,7 +203,7 @@ export default function Library() {
                     {isActive && player.isPlaying ? (
                       <span className="flex gap-0.5">
                         {[1, 2, 3].map((b) => (
-                          <span key={b} className="w-0.5 bg-red-500 rounded-full animate-pulse-red" style={{ height: `${8 + b * 3}px`, animationDelay: `${b * 0.15}s` }} />
+                          <span key={b} className="w-0.5 bg-violet-500 rounded-full animate-pulse-red" style={{ height: `${8 + b * 3}px`, animationDelay: `${b * 0.15}s` }} />
                         ))}
                       </span>
                     ) : (
@@ -211,13 +211,13 @@ export default function Library() {
                         <span className={cn("hrl-label text-muted-foreground group-hover:hidden", isActive && "hidden")}>
                           {String(i + 1).padStart(2, "0")}
                         </span>
-                        <Play className={cn("w-3.5 h-3.5 text-red-400 hidden group-hover:block", isActive && "block")} />
+                        <Play className={cn("w-3.5 h-3.5 text-violet-400 hidden group-hover:block", isActive && "block")} />
                       </>
                     )}
                   </div>
 
                   <div className="min-w-0 pr-3">
-                    <p className={cn("text-sm font-medium truncate", isActive && "text-red-400")}>{track.title}</p>
+                    <p className={cn("text-sm font-medium truncate", isActive && "text-violet-400")}>{track.title}</p>
                     <p className="hrl-label text-muted-foreground truncate">{track.artist}</p>
                     <div className="flex gap-1 mt-1">
                       <span className="hrl-badge-dim text-[10px] opacity-60 uppercase">{track.source === "local" ? "VPS" : track.source}</span>

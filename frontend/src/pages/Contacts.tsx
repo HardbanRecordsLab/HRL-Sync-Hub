@@ -118,7 +118,7 @@ export default function Contacts() {
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                     <button onClick={() => openEdit(c)} className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-white/5 transition"><Edit2 className="w-3 h-3" /></button>
-                    <button onClick={() => { if (confirm("Delete?")) deleteMut.mutate(c.id); }} className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition"><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={() => { if (confirm("Delete?")) deleteMut.mutate(c.id); }} className="p-1 rounded text-muted-foreground hover:text-violet-400 hover:bg-violet-500/8 transition"><Trash2 className="w-3 h-3" /></button>
                   </div>
                 </div>
                 <div className="space-y-1.5">

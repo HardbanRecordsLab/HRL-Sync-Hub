@@ -6,43 +6,48 @@
 
 @layer base {
   :root {
-    /* HRL Sync — Dark Industrial Label Palette */
-    --background: 10 8 14;          /* near-black with faint purple */
-    --foreground: 230 225 255;      /* cool white */
+    /* HRL Sync Hub — dark, violet→cyan brand (from logo) */
+    --background: 9 9 16;           /* near-black, faint indigo */
+    --foreground: 232 230 245;      /* cool white */
 
-    --card: 16 13 22;
-    --card-foreground: 230 225 255;
+    --card: 16 15 26;
+    --card-foreground: 232 230 245;
 
-    --popover: 16 13 22;
-    --popover-foreground: 230 225 255;
+    --popover: 16 15 26;
+    --popover-foreground: 232 230 245;
 
-    --primary: 255 60 80;           /* HRL red */
+    --primary: 139 92 246;          /* brand violet #8B5CF6 */
     --primary-foreground: 255 255 255;
 
-    --secondary: 22 18 32;
-    --secondary-foreground: 180 170 210;
+    --secondary: 22 20 36;
+    --secondary-foreground: 188 180 220;
 
-    --muted: 22 18 32;
-    --muted-foreground: 110 100 140;
+    --muted: 22 20 36;
+    --muted-foreground: 122 116 150;
 
-    --accent: 255 60 80;
-    --accent-foreground: 255 255 255;
+    --accent: 34 211 238;           /* brand cyan #22D3EE */
+    --accent-foreground: 12 12 20;
 
-    --destructive: 220 38 38;
+    --destructive: 225 76 90;
     --destructive-foreground: 255 255 255;
 
-    --border: 38 32 52;
-    --input: 22 18 32;
-    --ring: 255 60 80;
+    --border: 38 34 58;
+    --input: 22 20 36;
+    --ring: 139 92 246;
 
     --radius: 0.375rem;
 
-    /* HRL custom */
-    --hrl-red: #FF3C50;
-    --hrl-red-dim: rgba(255, 60, 80, 0.15);
+    /* HRL brand tokens */
+    --hrl-brand: #8B5CF6;                       /* violet */
+    --hrl-brand-2: #22D3EE;                     /* cyan */
+    --hrl-gradient: linear-gradient(120deg, #7C3AED 0%, #8B5CF6 45%, #22D3EE 100%);
+    --hrl-brand-dim: rgba(139, 92, 246, 0.15);
+    /* legacy alias — many components/inline styles still read var(--hrl-red) */
+    --hrl-red: var(--hrl-brand);
+    --hrl-red-dim: var(--hrl-brand-dim);
     --hrl-grid: rgba(255,255,255,0.03);
-    --hrl-glow: 0 0 30px rgba(255, 60, 80, 0.25);
-    --hrl-glow-sm: 0 0 12px rgba(255, 60, 80, 0.2);
+    --hrl-glow: 0 0 30px rgba(139, 92, 246, 0.30);
+    --hrl-glow-sm: 0 0 14px rgba(139, 92, 246, 0.28);
   }
 }
 
@@ -52,12 +57,14 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'DM Sans', sans-serif;
-    background-color: rgb(10, 8, 14);
-    /* Subtle grid texture */
+    background-color: rgb(9, 9, 16);
+    /* Subtle grid texture + faint brand glow top-left */
     background-image:
+      radial-gradient(60rem 40rem at 0% -10%, rgba(139,92,246,0.10), transparent 60%),
       linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+    background-attachment: fixed, scroll, scroll;
   }
 
   h1, h2, h3 {
@@ -92,11 +99,11 @@
   }
 
   .hrl-card:hover {
-    border-color: rgba(255, 60, 80, 0.3);
+    border-color: rgba(139, 92, 246, 0.35);
   }
 
   .hrl-btn-primary {
-    background: var(--hrl-red);
+    background: var(--hrl-gradient);
     color: white;
     font-family: 'Space Mono', monospace;
     font-size: 0.75rem;
@@ -107,8 +114,16 @@
   }
 
   .hrl-btn-primary:hover {
-    background: #ff5566;
+    filter: brightness(1.12);
     box-shadow: var(--hrl-glow-sm);
+  }
+
+  /* gradient text — headings / brand accents */
+  .hrl-gradient-text {
+    background: var(--hrl-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .hrl-stat-value {
@@ -120,15 +135,15 @@
   }
 
   .hrl-badge-red {
-    background: var(--hrl-red-dim);
-    color: var(--hrl-red);
+    background: var(--hrl-brand-dim);
+    color: #a78bfa;
     font-family: 'Space Mono', monospace;
     font-size: 0.625rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 2px 8px;
     border-radius: 2px;
-    border: 1px solid rgba(255, 60, 80, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.25);
   }
 
   .hrl-badge-dim {
@@ -153,7 +168,8 @@
 
   /* ── Audio Player ── */
   .player-bar {
-    background: rgba(10, 8, 14, 0.95);
+    background: rgba(9, 9, 16, 0.95);
+    -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border-top: 1px solid rgb(var(--border));
   }
@@ -177,13 +193,13 @@
   }
 
   .track-row:hover { background: rgba(255,255,255,0.04); }
-  .track-row.playing { background: var(--hrl-red-dim); }
+  .track-row.playing { background: var(--hrl-brand-dim); }
 
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 60, 80, 0.4); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.45); }
 
   /* ── Animations ── */
   @keyframes fade-in {

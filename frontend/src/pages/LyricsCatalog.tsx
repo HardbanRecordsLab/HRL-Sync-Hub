@@ -334,7 +334,7 @@ export default function LyricsCatalog() {
                     </>
                   )}
                   <button
-                    className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition ml-auto"
+                    className="p-1.5 rounded text-muted-foreground hover:text-violet-400 hover:bg-violet-500/8 transition ml-auto"
                     onClick={() => { if (confirm("Delete?")) deleteMut.mutate(entry.id); }}
                     title="Delete"
                   >

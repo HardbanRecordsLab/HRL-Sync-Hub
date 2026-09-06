@@ -43,7 +43,7 @@ export default function PublicLibrary() {
             <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <div className="w-24 h-24 mx-auto mb-4 flex items-center justify-center overflow-hidden rounded-xl">
+                    <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center overflow-hidden rounded-2xl bg-white/95 p-2">
                         <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
                     </div>
                     <h1 className="hrl-title text-4xl tracking-widest text-foreground">PUBLIC LIBRARY</h1>
@@ -54,7 +54,7 @@ export default function PublicLibrary() {
 
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-                        <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+                        <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
                         <span className="hrl-label tracking-widest opacity-50">SYNCING CATALOG…</span>
                     </div>
                 ) : !tracks || tracks.length === 0 ? (
@@ -77,8 +77,8 @@ export default function PublicLibrary() {
                                     <div
                                         key={track.id}
                                         className={cn(
-                                            "grid items-center px-4 py-4 cursor-pointer group transition-all hover:bg-red-500/5",
-                                            isActive && "bg-red-500/10"
+                                            "grid items-center px-4 py-4 cursor-pointer group transition-all hover:bg-violet-500/5",
+                                            isActive && "bg-violet-500/10"
                                         )}
                                         style={{ gridTemplateColumns: "40px 1fr 100px 80px" }}
                                         onClick={() => handlePlay(track)}
@@ -87,16 +87,16 @@ export default function PublicLibrary() {
                                             {isActive && player.isPlaying ? (
                                                 <div className="flex gap-0.5 items-end h-3">
                                                     {[1, 2, 3].map(b => (
-                                                        <div key={b} className="w-0.5 bg-red-500 animate-pulse-red" style={{ height: `${6 + b * 2}px`, animationDelay: `${b * 0.1}s` }} />
+                                                        <div key={b} className="w-0.5 bg-violet-500 animate-pulse-red" style={{ height: `${6 + b * 2}px`, animationDelay: `${b * 0.1}s` }} />
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <Play className={cn("w-3.5 h-3.5 text-muted-foreground group-hover:text-red-400 transition-colors", isActive && "text-red-400")} />
+                                                <Play className={cn("w-3.5 h-3.5 text-muted-foreground group-hover:text-violet-400 transition-colors", isActive && "text-violet-400")} />
                                             )}
                                         </div>
 
                                         <div className="min-w-0 pr-4">
-                                            <p className={cn("text-sm font-medium truncate tracking-wide", isActive && "text-red-400")}>
+                                            <p className={cn("text-sm font-medium truncate tracking-wide", isActive && "text-violet-400")}>
                                                 {track.title}
                                             </p>
                                             <p className="hrl-label text-[10px] text-muted-foreground/70 truncate uppercase">

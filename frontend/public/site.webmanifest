@@ -1,0 +1,14 @@
+{
+  "name": "HRL Sync Hub",
+  "short_name": "HRL Sync",
+  "description": "Prywatna biblioteka sync-licensingowa Hardban Records Lab",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090F",
+  "theme_color": "#09090F",
+  "icons": [
+    { "src": "/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

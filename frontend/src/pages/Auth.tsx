@@ -29,9 +29,8 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/favicon.png" alt="HRL" className="w-12 h-12 mx-auto mb-4 object-contain" />
-          <h1 className="hrl-title text-3xl tracking-wider">HRL SYNC</h1>
-          <p className="hrl-label text-muted-foreground mt-1" style={{ letterSpacing: "0.15em" }}>
+          <img src="/logo.png" alt="HRL Sync Hub" className="w-44 mx-auto mb-5 object-contain rounded-2xl bg-white/95 p-3 shadow-[0_0_40px_-8px_rgba(139,92,246,0.5)]" />
+          <p className="hrl-label hrl-gradient-text" style={{ letterSpacing: "0.2em" }}>
             HARDBAN RECORDS LAB
           </p>
         </div>
@@ -60,7 +59,7 @@ export default function AuthPage() {
           </div>
 
           {err && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">{err}</p>
+            <p className="text-sm text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded px-3 py-2">{err}</p>
           )}
 
           <button

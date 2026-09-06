@@ -54,11 +54,11 @@ export default function Layout({ children }: LayoutProps) {
           "flex items-center gap-3 px-4 py-5 border-b border-border",
           collapsed && "justify-center px-2"
         )}>
-          <img src="/favicon.png" alt="HRL Logo" className="w-8 h-8 shrink-0 object-contain" />
+          <img src="/favicon.png" alt="HRL Sync Hub" className="w-9 h-9 shrink-0 object-contain rounded-md bg-white/95 p-0.5" />
           {!collapsed && (
             <div>
-              <p className="hrl-title text-lg leading-none text-foreground tracking-wider">HRL SYNC</p>
-              <p className="hrl-label text-[10px] mt-0.5" style={{ color: 'var(--hrl-red)', letterSpacing: '0.15em' }}>
+              <p className="hrl-title text-lg leading-none text-foreground tracking-wider">HRL SYNC HUB</p>
+              <p className="hrl-label text-[10px] mt-0.5 hrl-gradient-text" style={{ letterSpacing: '0.15em' }}>
                 HARDBAN RECORDS LAB
               </p>
             </div>
@@ -83,7 +83,7 @@ export default function Layout({ children }: LayoutProps) {
                 className={cn(
                   "flex items-center gap-3 mx-2 my-0.5 rounded px-3 py-2.5 transition-all hrl-nav-link",
                   active
-                    ? "bg-red-500/15 text-red-400 border border-red-500/20"
+                    ? "bg-violet-500/15 text-violet-400 border border-violet-500/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/4",
                   collapsed && "justify-center px-2"
                 )}
@@ -109,7 +109,7 @@ export default function Layout({ children }: LayoutProps) {
           <button
             onClick={signOut}
             className={cn(
-              "flex items-center gap-3 w-full rounded px-3 py-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-all hrl-nav-link",
+              "flex items-center gap-3 w-full rounded px-3 py-2 text-muted-foreground hover:text-violet-400 hover:bg-violet-500/8 transition-all hrl-nav-link",
               collapsed && "justify-center"
             )}
           >

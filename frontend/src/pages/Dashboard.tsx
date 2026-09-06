@@ -54,7 +54,7 @@ export default function Dashboard() {
         {/* Recent Tracks */}
         <div className="hrl-card p-5 animate-fade-in stagger-3">
           <div className="flex items-center gap-2 mb-5">
-            <Clock className="w-3.5 h-3.5 text-red-500" />
+            <Clock className="w-3.5 h-3.5 text-violet-500" />
             <h2 className="hrl-title text-xl">RECENT TRACKS</h2>
           </div>
           {stats?.recentTracks.length === 0 && (
@@ -84,8 +84,8 @@ export default function Dashboard() {
             { href: "/lyrics",  label: "Lyrics Catalog",      desc: "Manage lyrics" },
             { href: "/drive",   label: "Import from Drive",   desc: "Optional source" },
           ].map(({ href, label, desc }) => (
-            <a key={href} href={href} className="hrl-card p-4 block hover:border-red-500/30 transition group">
-              <p className="font-medium text-sm group-hover:text-red-400 transition mb-1">{label}</p>
+            <a key={href} href={href} className="hrl-card p-4 block hover:border-violet-500/30 transition group">
+              <p className="font-medium text-sm group-hover:text-violet-400 transition mb-1">{label}</p>
               <p className="hrl-label text-muted-foreground">{desc}</p>
             </a>
           ))}

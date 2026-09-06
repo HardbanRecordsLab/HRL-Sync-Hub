@@ -35,7 +35,7 @@ export default function Settings() {
         {showDriveMsg && (
           <div className={cn(
             "flex items-center gap-2 p-3 rounded border text-sm",
-            driveStatus === "connected" ? "border-green-500/30 bg-green-500/8 text-green-400" : "border-red-500/30 bg-red-500/8 text-red-400"
+            driveStatus === "connected" ? "border-green-500/30 bg-green-500/8 text-green-400" : "border-violet-500/30 bg-violet-500/8 text-violet-400"
           )}>
             {driveStatus === "connected" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
             {driveStatus === "connected" ? "Google Drive connected successfully." : "Failed to connect Google Drive. Please try again."}
@@ -52,7 +52,7 @@ export default function Settings() {
                 className={cn(
                   "flex items-center gap-2.5 w-full rounded px-3 py-2 text-left transition hrl-nav-link",
                   tab === id
-                    ? "bg-red-500/15 text-red-400 border border-red-500/20"
+                    ? "bg-violet-500/15 text-violet-400 border border-violet-500/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/4"
                 )}
               >
@@ -220,7 +220,7 @@ function SecurityTab() {
             type="password"
             value={form.confirm}
             onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
-            className={form.confirm && form.confirm !== form.new_password ? "border-red-500/50" : ""}
+            className={form.confirm && form.confirm !== form.new_password ? "border-violet-500/50" : ""}
           />
         </div>
         <Button
