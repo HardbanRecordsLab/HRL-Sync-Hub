@@ -40,7 +40,7 @@ Google Drive jest opcjonalnym źródłem importu.
 
 ## 2. Backend — Docker (zalecane)
 
-Wymaga tylko Dockera na VPS. Stack: API + PostgreSQL + MinIO.
+Wymaga tylko Dockera. Stack: API + MinIO (+ opcjonalnie własny Postgres).
 
 ```bash
 git clone git@github.com:HardbanRecordsLab/HRL-Sync-Hub.git /srv/hrl-sync
@@ -48,8 +48,37 @@ cd /srv/hrl-sync
 cp .env.example .env
 nano .env                 # ↓ patrz "Wymagane zmienne"
 echo 'API_PORT=9110' >> .env
-docker compose up -d --build
-docker compose exec api npm run db:seed   # tworzy konto admina (ADMIN_EMAIL / ADMIN_PASSWORD)
+```
+
+**Wariant A — wbudowany Postgres** (świeży serwer, zero zależności):
+
+```bash
+docker compose --profile localdb up -d --build
+```
+
+**Wariant B — współdzielony Postgres** (jak na produkcji HRL — jeden PG na cały VPS,
+objęty istniejącym backupem serwera). W `.env`:
+
+```bash
+DATABASE_URL=postgres://USER:PASS@HOST:5432/hrl_sync
+```
+
+i `docker-compose.override.yml` (nie idzie do git) podpinający kontener API do sieci tej bazy:
+
+```yaml
+services:
+  api:
+    networks: [default, shared-db]
+networks:
+  shared-db:
+    external: true
+    name: <nazwa-sieci-dockera-bazy>
+```
+
+potem: `docker compose up -d --build`
+
+```bash
+docker compose exec api npm run db:seed   # konto admina (ADMIN_EMAIL / ADMIN_PASSWORD)
 curl localhost:9110/health                # {"status":"ok","db":"connected"}
 ```
 
@@ -137,12 +166,28 @@ Sekrety repo: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_KEY`, `DEPLOY_DIR`.
 ## 7. Operacje
 
 ```bash
-docker compose logs -f api
-docker compose exec api npm run db:seed                       # reset hasła admina
-docker compose exec db pg_dump -U hrlsync hrlsync > db_$(date +%F).sql
-docker compose exec minio mc mirror --overwrite local/hrl-audio /data-backup   # backup audio
+docker compose logs -f api                     # logi (też w wolumenie hrl_logs)
+docker compose exec api npm run db:seed        # reset hasła admina
 docker compose restart api
 ```
 
-MinIO console: odkomentuj `ports: 127.0.0.1:9001:9001` w `docker-compose.yml`,
-potem `http://127.0.0.1:9001` (login = `S3_ACCESS_KEY` / `S3_SECRET_KEY`).
+MinIO console: odkomentuj `ports: 127.0.0.1:9001:9001` w compose → `http://127.0.0.1:9001`
+(login = `S3_ACCESS_KEY` / `S3_SECRET_KEY`).
+
+### Backup
+
+`scripts/backup.sh` — codzienny zrzut: MinIO (wolumen → `.tar.gz`) + wbudowany
+Postgres (jeśli używany; przy współdzielonym PG bazę backupuje serwer bazy).
+
+```bash
+crontab -e
+# 30 3 * * *  /srv/hrl-sync/scripts/backup.sh >> /var/log/hrl-sync-backup.log 2>&1
+```
+
+Domyślnie do `/srv/backups/hrl-sync/`, retencja 14 dni. Restore — instrukcje w nagłówku skryptu.
+
+### Monitoring
+
+- Auto-restart: `restart: unless-stopped` + healthcheck kontenera.
+- Błędy aplikacji: ustaw `SENTRY_DSN` w `.env` → `docker compose up -d`.
+- Uptime: dodaj monitor HTTP w Uptime Kuma na `https://hrl-sync.hardbanrecordslab.online/health`.
