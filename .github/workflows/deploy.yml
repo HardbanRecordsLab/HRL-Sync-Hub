@@ -38,13 +38,20 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script_stop: true
           script: |
-            set -euo pipefail
             cd ${{ secrets.DEPLOY_DIR }}
             git pull --ff-only origin main
             docker compose up -d --build
-            # wait for the API to report healthy
-            for i in $(seq 1 20); do
-              curl -sf localhost:9110/health && break
+            echo "Waiting for API to report healthy..."
+            ok=0
+            for i in $(seq 1 25); do
+              if curl -fsS -o /dev/null "http://localhost:${API_PORT:-9110}/health"; then ok=1; break; fi
               sleep 3
             done
             docker compose ps
+            if [ "$ok" = "1" ]; then
+              echo "API healthy ✓"
+            else
+              echo "::error::API did not report healthy within 75s"
+              docker compose logs api --tail 40
+              exit 1
+            fi
