@@ -144,19 +144,26 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
 
   let common = {};
   let format = {};
+  let parseFailed = false;
   try {
     const meta = await parseFile(tmpPath);
     common = meta.common || {};
     format = meta.format || {};
   } catch (e) {
-    // music-metadata does real binary format detection across every audio
-    // container we accept (mp3 incl. ID3v2, wav, flac, ogg, m4a/aac...) —
-    // if it can't recognize the file at all, it's not audio, regardless of
-    // what Content-Type the browser claimed. Reject here instead of the
-    // previous silent-continue, which let anything through as long as the
-    // client-supplied MIME type started with "audio/".
+    parseFailed = true;
+  }
+
+  // music-metadata does real binary format detection across every audio
+  // container we accept (mp3 incl. ID3v2, wav, flac, ogg, m4a/aac...), but
+  // it doesn't throw on garbage input — it just returns an empty format
+  // object (no `container`, no `codec`). A real audio file always has
+  // `format.container` set, so that's the actual signal to check, not
+  // whether parseFile() threw. Reject here instead of the previous
+  // silent-continue, which let anything through as long as the
+  // client-supplied MIME type started with "audio/".
+  if (parseFailed || !format.container) {
     await fs.promises.unlink(tmpPath).catch(() => {});
-    logger.warn(`Rejected upload ${objectKey}: not a recognizable audio file (${e.message})`);
+    logger.warn(`Rejected upload ${objectKey}: not a recognizable audio file`);
     return res.status(400).json({ error: "File does not look like a valid audio file" });
   }
 
