@@ -149,7 +149,15 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
     common = meta.common || {};
     format = meta.format || {};
   } catch (e) {
-    logger.warn(`Metadata parse failed for ${objectKey}: ${e.message}`);
+    // music-metadata does real binary format detection across every audio
+    // container we accept (mp3 incl. ID3v2, wav, flac, ogg, m4a/aac...) —
+    // if it can't recognize the file at all, it's not audio, regardless of
+    // what Content-Type the browser claimed. Reject here instead of the
+    // previous silent-continue, which let anything through as long as the
+    // client-supplied MIME type started with "audio/".
+    await fs.promises.unlink(tmpPath).catch(() => {});
+    logger.warn(`Rejected upload ${objectKey}: not a recognizable audio file (${e.message})`);
+    return res.status(400).json({ error: "File does not look like a valid audio file" });
   }
 
   const num = (v) => (v == null || Number.isNaN(Number(v)) ? null : Math.round(Number(v)));
