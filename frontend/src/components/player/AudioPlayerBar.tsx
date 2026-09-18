@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioPlayer } from "@/hooks/useAudioPlayer";
+import { WaveformSeekbar } from "./WaveformSeekbar";
 
 interface Props { player: AudioPlayer; }
 
@@ -149,6 +150,18 @@ export function AudioPlayerBar({ player }: Props) {
       </div>
 
       {/* ── Expanded metadata ──────────────────────── */}
+      {expanded && (
+        <div className="px-6 pb-3">
+          <WaveformSeekbar
+            audioUrl={track.fileUrl}
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={seek}
+            accentClassName="bg-violet-500"
+            height={36}
+          />
+        </div>
+      )}
       {expanded && (
         <div className="px-6 pb-4 flex items-center gap-6 text-sm">
           {track.key && (

@@ -6,6 +6,7 @@ const objectStore = require("../services/storage");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const { parseFile } = require("music-metadata");
 
 const { requireAdmin } = require("../middleware/auth");
@@ -15,6 +16,37 @@ const { requireAdmin } = require("../middleware/auth");
 // `local_file_path` holds the object key.
 const STAGING_DIR = path.join(__dirname, "../../uploads", ".staging");
 const MAX_UPLOAD_BYTES = (parseInt(process.env.MAX_UPLOAD_MB || "300", 10)) * 1024 * 1024;
+
+// ── Rejected-upload quarantine ────────────────────────────────────────────────
+// Keeps the last N files that failed the "is this actually audio" check, so a
+// false-positive rejection can be inspected/reproduced instead of vanishing.
+const QUARANTINE_DIR = path.join(__dirname, "../../uploads", ".rejected");
+const QUARANTINE_MAX_FILES = 20;
+
+async function quarantineRejectedUpload(tmpPath, objectKey) {
+  try {
+    await fs.promises.mkdir(QUARANTINE_DIR, { recursive: true });
+    const dest = path.join(QUARANTINE_DIR, `${Date.now()}-${objectKey}`);
+    await fs.promises.rename(tmpPath, dest);
+
+    const entries = await fs.promises.readdir(QUARANTINE_DIR);
+    if (entries.length > QUARANTINE_MAX_FILES) {
+      const withTimes = await Promise.all(
+        entries.map(async (name) => {
+          const full = path.join(QUARANTINE_DIR, name);
+          const stat = await fs.promises.stat(full).catch(() => null);
+          return { full, mtime: stat ? stat.mtimeMs : 0 };
+        })
+      );
+      withTimes.sort((a, b) => a.mtime - b.mtime);
+      const toRemove = withTimes.slice(0, withTimes.length - QUARANTINE_MAX_FILES);
+      await Promise.all(toRemove.map((f) => fs.promises.unlink(f.full).catch(() => {})));
+    }
+  } catch (e) {
+    logger.warn(`Could not quarantine rejected upload ${objectKey}: ${e.message}`);
+    await fs.promises.unlink(tmpPath).catch(() => {});
+  }
+}
 
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -139,18 +171,20 @@ const uploadSingle = (req, res, next) =>
 router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const tmpPath = req.file.path;
-  const objectKey = req.file.filename; // unique, sanitized
+  const stagingLabel = req.file.filename; // multer's random staging name — only used for logs/quarantine
   const size = req.file.size;
 
   let common = {};
   let format = {};
   let parseFailed = false;
+  let parseError = null;
   try {
     const meta = await parseFile(tmpPath);
     common = meta.common || {};
     format = meta.format || {};
   } catch (e) {
     parseFailed = true;
+    parseError = e.message;
   }
 
   // music-metadata does real binary format detection across every audio
@@ -162,8 +196,12 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   // silent-continue, which let anything through as long as the
   // client-supplied MIME type started with "audio/".
   if (parseFailed || !format.container) {
-    await fs.promises.unlink(tmpPath).catch(() => {});
-    logger.warn(`Rejected upload ${objectKey}: not a recognizable audio file`);
+    // Quarantine instead of delete: a rejection with no surviving evidence is
+    // undiagnosable (this bit us — a real WAV was rejected and the file was
+    // gone before anyone could inspect it). Keep the last 20 rejects so a
+    // real bug can be reproduced from the actual bytes, not guessed at.
+    await quarantineRejectedUpload(tmpPath, stagingLabel);
+    logger.warn(`Rejected upload ${stagingLabel}: not a recognizable audio file (${parseFailed ? `parseFile threw: ${parseError}` : "empty format.container"})`);
     return res.status(400).json({ error: "File does not look like a valid audio file" });
   }
 
@@ -173,7 +211,17 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   const composer = req.body.composer || (common.composer && common.composer[0]) || null;
   const bpm = num(req.body.bpm) ?? num(common.bpm);
   const key = req.body.key || common.key || null;
+  const catalogNumber = req.body.catalog_number || req.body.catalogNumber || null;
   const duration = num(format.duration);
+
+  // Content-hash object key (not the random staging name) — the same audio
+  // uploaded through CMLP resolves to the same key, so the shared bucket
+  // (see handbook §9/§12, decided 2026-09-17) naturally dedupes instead of
+  // storing the same bytes twice under two different names.
+  const fileBuffer = await fs.promises.readFile(tmpPath);
+  const contentHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+  const ext = path.extname(req.file.originalname) || path.extname(stagingLabel);
+  const objectKey = `${contentHash}${ext}`;
 
   // Move the staged temp file into the object store (this also deletes the temp file).
   try {
@@ -187,11 +235,11 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   try {
     const { rows: [track] } = await query(
       `INSERT INTO tracks (user_id, title, artist, composer, file_name, file_size, mime_type,
-         local_file_path, source, bpm, key, duration, clearance_status, is_public)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'local',$9,$10,$11,'not_cleared',false)
+         local_file_path, source, bpm, key, duration, catalog_number, clearance_status, is_public)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'local',$9,$10,$11,$12,'not_cleared',false)
        RETURNING *`,
       [req.userId, title, artist, composer, req.file.originalname, size,
-       req.file.mimetype, objectKey, bpm, key, duration]
+       req.file.mimetype, objectKey, bpm, key, duration, catalogNumber]
     );
     logger.info(`Uploaded track ${track.id} → ${objectStore.driver}:${objectKey} (${size} bytes)`);
     res.status(201).json(track);
@@ -277,6 +325,119 @@ router.get("/search", async (req, res) => {
   res.json({ tracks: rows });
 });
 
+// ── Metadata Engine integration ───────────────────────────────────────────────
+// Both services run on the same VPS and share the `hbrl-db` Docker network, so
+// this stays entirely internal — no public domain, no API key (Metadata Engine's
+// /tag/file endpoint currently has none; see handbook note on that).
+const METADATA_ENGINE_API_URL = process.env.METADATA_ENGINE_API_URL || "http://metadata-backend:7860/api";
+const TAGGABLE_EXTENSIONS = new Set([".mp3", ".wav", ".flac"]);
+
+// ── POST /api/tracks/:id/tag-via-metadata-engine — embed ID3/Vorbis tags ─────
+// using Metadata Engine's DSP-driven tagger, then overwrite the stored file.
+router.post("/:id/tag-via-metadata-engine", requireAdmin, async (req, res) => {
+  const track = await queryOne(
+    `SELECT t.*,
+       COALESCE(json_agg(DISTINCT tg.genre) FILTER (WHERE tg.id IS NOT NULL), '[]') AS genres,
+       COALESCE(json_agg(DISTINCT tm.mood) FILTER (WHERE tm.id IS NOT NULL), '[]') AS moods,
+       COALESCE(json_agg(DISTINCT ti.instrument) FILTER (WHERE ti.id IS NOT NULL), '[]') AS instruments,
+       COALESCE(json_agg(DISTINCT tk.keyword) FILTER (WHERE tk.id IS NOT NULL), '[]') AS keywords
+     FROM tracks t
+     LEFT JOIN track_genres tg ON tg.track_id = t.id
+     LEFT JOIN track_moods tm ON tm.track_id = t.id
+     LEFT JOIN track_instruments ti ON ti.track_id = t.id
+     LEFT JOIN track_keywords tk ON tk.track_id = t.id
+     WHERE t.id = $1 AND t.user_id = $2
+     GROUP BY t.id`,
+    [req.params.id, req.userId]
+  );
+  if (!track) return res.status(404).json({ error: "Track not found" });
+  if (track.source !== "local" || !track.local_file_path) {
+    return res.status(400).json({ error: "Track has no stored audio file to tag" });
+  }
+
+  const objectKey = path.basename(track.local_file_path);
+  const ext = path.extname(track.file_name || "").toLowerCase();
+  if (!TAGGABLE_EXTENSIONS.has(ext)) {
+    return res.status(400).json({ error: "Metadata Engine can only tag MP3, WAV or FLAC files" });
+  }
+
+  let sourceBuffer;
+  try {
+    const stream = await objectStore.getStream(objectKey);
+    const chunks = [];
+    for await (const c of stream) chunks.push(c);
+    sourceBuffer = Buffer.concat(chunks);
+  } catch (e) {
+    logger.error(`tag-via-metadata-engine: could not read stored audio for track ${track.id}: ${e.message}`);
+    return res.status(502).json({ error: "Could not read stored audio file" });
+  }
+
+  const meta = {
+    title: track.title,
+    artist: track.artist,
+    composer: track.composer || undefined,
+    bpm: track.bpm || undefined,
+    key: track.key || undefined,
+    trackDescription: track.description || undefined,
+    moods: track.moods || [],
+    keywords: track.keywords || [],
+    instrumentation: track.instruments || [],
+    catalogNumber: track.catalog_number || undefined,
+    mainGenre: (track.genres || [])[0] || undefined,
+    additionalGenres: (track.genres || []).slice(1),
+  };
+
+  const form = new FormData();
+  form.append("file", new Blob([sourceBuffer]), track.file_name || objectKey);
+  form.append("metadata", JSON.stringify(meta));
+
+  let taggedBuffer;
+  try {
+    const upstream = await fetch(`${METADATA_ENGINE_API_URL}/tag/file`, { method: "POST", body: form });
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => "");
+      logger.error(`tag-via-metadata-engine: Metadata Engine returned ${upstream.status} for track ${track.id}: ${detail.slice(0, 300)}`);
+      return res.status(502).json({ error: "Metadata Engine could not tag this file" });
+    }
+    taggedBuffer = Buffer.from(await upstream.arrayBuffer());
+  } catch (e) {
+    logger.error(`tag-via-metadata-engine: request to Metadata Engine failed: ${e.message}`);
+    return res.status(502).json({ error: "Metadata Engine is unreachable" });
+  }
+
+  // Re-validate before overwriting the stored file — never trust an upstream
+  // response blindly, same bar as a direct user upload (see /upload above).
+  fs.mkdirSync(STAGING_DIR, { recursive: true });
+  const tmpPath = path.join(STAGING_DIR, `${Date.now()}-${Math.round(Math.random() * 1e9)}-tagged-${objectKey}`);
+  await fs.promises.writeFile(tmpPath, taggedBuffer);
+
+  let format = {};
+  let parseFailed = false;
+  try {
+    const parsed = await parseFile(tmpPath);
+    format = parsed.format || {};
+  } catch (e) {
+    parseFailed = true;
+  }
+  if (parseFailed || !format.container) {
+    await quarantineRejectedUpload(tmpPath, `tagged-${objectKey}`);
+    logger.error(`tag-via-metadata-engine: Metadata Engine returned an unparseable file for track ${track.id}`);
+    return res.status(502).json({ error: "Metadata Engine returned an invalid audio file — original left untouched" });
+  }
+
+  try {
+    const stored = await objectStore.putFile(objectKey, tmpPath, track.mime_type);
+    const newSize = stored?.size ?? taggedBuffer.length;
+    await query("UPDATE tracks SET file_size=$1, updated_at=now() WHERE id=$2", [newSize, track.id]);
+    logger.info(`Tagged track ${track.id} via Metadata Engine (${newSize} bytes)`);
+    res.json({ success: true, fileSize: newSize });
+  } catch (e) {
+    await fs.promises.unlink(tmpPath).catch(() => {});
+    logger.error(`tag-via-metadata-engine: could not store tagged file for track ${track.id}: ${e.message}`);
+    res.status(500).json({ error: "Could not save tagged file" });
+  }
+});
+
 // ── GET /api/tracks/:id ────────────────────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   const track = await queryOne(
@@ -307,17 +468,17 @@ router.get("/:id", async (req, res) => {
 // ── POST /api/tracks — metadata-only row (no file; e.g. bulk import / tests) ──
 router.post("/", requireAdmin, async (req, res) => {
   const {
-    title, artist, composer, isrc, iswc, file_name, file_size, mime_type,
+    title, artist, composer, isrc, iswc, catalog_number, file_name, file_size, mime_type,
     duration, bpm, key, description, rights_type, clearance_status
   } = req.body;
   if (!title || !artist || !file_name) return res.status(400).json({ error: "title, artist, file_name required" });
 
   const { rows: [t] } = await query(
-    `INSERT INTO tracks (user_id,title,artist,composer,isrc,iswc,file_name,file_size,mime_type,
+    `INSERT INTO tracks (user_id,title,artist,composer,isrc,iswc,catalog_number,file_name,file_size,mime_type,
        duration,bpm,key,description,rights_type,clearance_status,source)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'local')
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'local')
      RETURNING *`,
-    [req.userId, title, artist, composer ?? null, isrc ?? null, iswc ?? null, file_name,
+    [req.userId, title, artist, composer ?? null, isrc ?? null, iswc ?? null, catalog_number ?? null, file_name,
     file_size ?? null, mime_type ?? 'audio/mpeg',
     duration ?? null, bpm ?? null, key ?? null, description ?? null,
     rights_type ?? null, clearance_status ?? 'not_cleared']
@@ -327,7 +488,7 @@ router.post("/", requireAdmin, async (req, res) => {
 
 // ── PATCH /api/tracks/:id ──────────────────────────────────────────────────────
 router.patch("/:id", async (req, res) => {
-  const allowed = ["title", "artist", "composer", "isrc", "iswc", "bpm", "key", "description",
+  const allowed = ["title", "artist", "composer", "isrc", "iswc", "catalog_number", "bpm", "key", "description",
     "rights_type", "clearance_status", "duration", "mime_type", "file_name"];
   const sets = [], params = [];
   allowed.forEach(k => {

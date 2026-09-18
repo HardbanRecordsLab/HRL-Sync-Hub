@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS tracks (
   composer             TEXT,
   isrc                 TEXT,
   iswc                 TEXT,
+  catalog_number       TEXT,           -- internal catalog ref, not a public ISRC/ISWC (closed catalog)
   local_file_path      TEXT,           -- object key in the storage bucket
   file_name            TEXT NOT NULL,
   file_size            BIGINT,
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS tracks (
 );
 ALTER TABLE tracks         ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
 ALTER TABLE tracks         DROP COLUMN IF EXISTS google_drive_file_id;
+ALTER TABLE tracks         ADD COLUMN IF NOT EXISTS catalog_number TEXT;
 
 CREATE TABLE IF NOT EXISTS track_genres (
   id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),

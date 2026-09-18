@@ -236,6 +236,9 @@ export default function Library() {
                       <DropdownMenuItem onClick={() => (window.location.href = `/library/${track.id}`)}>
                         View details
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => (window.location.href = `/library/${track.id}?edit=1`)}>
+                        Edit metadata
+                      </DropdownMenuItem>
 
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>

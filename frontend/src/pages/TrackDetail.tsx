@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit2, Save, X, Play, Pause,
-  Loader2, Plus, Trash2, Check, Sparkles
+  Loader2, Plus, Trash2, Check, Sparkles, Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,10 @@ const MOOD_OPTIONS = ["Uplifting", "Dark", "Tense", "Romantic", "Epic", "Calm", 
 export default function TrackDetail() {
   const { trackId } = useParams<{ trackId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const player = usePlayer();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(searchParams.get("edit") === "1");
   const [form, setForm] = useState<any>({});
 
   const { data: track, isLoading } = useQuery({
@@ -44,10 +45,22 @@ export default function TrackDetail() {
         title: track.title, artist: track.artist, composer: track.composer ?? "",
         bpm: track.bpm ?? "", key: track.key ?? "", description: track.description ?? "",
         clearance_status: track.clearance_status, rights_type: track.rights_type ?? "",
+        isrc: track.isrc ?? "", catalog_number: track.catalog_number ?? "",
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track]);
+
+  // Deep-linked from the Library "…" menu (`/library/:id?edit=1`) — drop the
+  // query param once consumed so a page refresh doesn't force edit mode again.
+  useEffect(() => {
+    if (searchParams.get("edit") === "1") {
+      setEditing(true);
+      searchParams.delete("edit");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const saveMut = useMutation({
     mutationFn: () => api.patch(`/api/tracks/${trackId}`, form),
@@ -79,6 +92,18 @@ export default function TrackDetail() {
       toast.success("AI Analysis complete: Genres and moods updated.");
     },
     onError: (e: any) => toast.error("AI Service Error: " + e.message),
+  });
+
+  // Embeds title/artist/BPM/key/genres/moods/etc. as real ID3/Vorbis tags in the
+  // stored audio file itself (via Metadata Engine), so the file carries its
+  // metadata wherever it's downloaded — not just in this app's database.
+  const tagMut = useMutation({
+    mutationFn: () => api.post<any>(`/api/tracks/${trackId}/tag-via-metadata-engine`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["track", trackId] });
+      toast.success("Audio file tagged via Metadata Engine.");
+    },
+    onError: (e: any) => toast.error("Tagging failed: " + e.message),
   });
 
   if (isLoading) return (
@@ -165,6 +190,16 @@ export default function TrackDetail() {
               {aiMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Sparkles className="w-3 h-3 mr-1.5" />}
               AI Insight
             </Button>
+            <Button
+              variant="outline" size="sm"
+              className="h-8 text-xs hrl-label border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              onClick={() => tagMut.mutate()}
+              disabled={tagMut.isPending || !streamURL}
+              title="Embed current title/artist/BPM/key/genres/moods as real ID3/Vorbis tags in the stored file via Metadata Engine"
+            >
+              {tagMut.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Tag className="w-3 h-3 mr-1.5" />}
+              Tag via Metadata Engine
+            </Button>
           </div>
         </div>
 
@@ -179,6 +214,7 @@ export default function TrackDetail() {
                   { label: "Key", key: "key", type: "text" },
                   { label: "Composer", key: "composer", type: "text" },
                   { label: "ISRC", key: "isrc", type: "text" },
+                  { label: "Catalog #", key: "catalog_number", type: "text" },
                 ].map(({ label, key, type }) => (
                   <div key={key}>
                     <p className="hrl-label text-muted-foreground mb-1">{label}</p>
