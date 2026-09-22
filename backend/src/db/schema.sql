@@ -41,90 +41,55 @@ CREATE TABLE IF NOT EXISTS users (
 DROP TABLE IF EXISTS user_drive_tokens;
 
 -- ─── Tracks ─────────────────────────────────────────────────────────────────
+-- Shared catalog with CMLP as of 2026-09-22 (handbook, catalog unification). In
+-- PRODUCTION (shared-Postgres deploy), `tracks` is NOT this table — it's a
+-- postgres_fdw foreign table pointing at cmlp.tracks, set up once directly on the
+-- Postgres server (not by this script; see D-notes / deploy docs). This
+-- CREATE TABLE only fires there if that foreign table doesn't already exist
+-- (IF NOT EXISTS sees it and skips), so it never conflicts.
+-- In a LOCAL/bundled-Postgres or test (pg-mem) deploy there is no CMLP to share
+-- with, so this is a real local table — same shape as CMLP's, no user_id (the
+-- catalog was never meant to be siloed per-uploader, see #D-16-ish decision
+-- 2026-09-22), id is a plain serial int (not UUID) to match CMLP's.
 CREATE TABLE IF NOT EXISTS tracks (
-  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id                   SERIAL PRIMARY KEY,
   title                TEXT NOT NULL,
   artist               TEXT NOT NULL,
   composer             TEXT,
   isrc                 TEXT,
   iswc                 TEXT,
   catalog_number       TEXT,           -- internal catalog ref, not a public ISRC/ISWC (closed catalog)
-  local_file_path      TEXT,           -- object key in the storage bucket
-  file_name            TEXT NOT NULL,
+  object_key           TEXT,           -- content-hash object key in the storage bucket
+  file_hash            TEXT,           -- sha256 of the file (same value baked into object_key)
+  filename             TEXT NOT NULL,
   file_size            BIGINT,
   mime_type            TEXT DEFAULT 'audio/mpeg',
-  duration             INTEGER,
+  duration_ms          INTEGER,
   bpm                  INTEGER,
-  key                  TEXT,
+  musical_key          TEXT,
+  genre                TEXT,
+  mood                 JSONB,
   description          TEXT,
-  rights_type          rights_type,
+  metadata             JSONB,          -- catch-all: instruments[], keywords[], google_drive_file_id, ...
   clearance_status     clearance_status DEFAULT 'not_cleared',
   source               TEXT DEFAULT 'local',
+  status               TEXT DEFAULT 'active',
   is_public            BOOLEAN DEFAULT false,
   created_at           TIMESTAMPTZ DEFAULT now(),
   updated_at           TIMESTAMPTZ DEFAULT now()
 );
-ALTER TABLE tracks         ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
-ALTER TABLE tracks         DROP COLUMN IF EXISTS google_drive_file_id;
-ALTER TABLE tracks         ADD COLUMN IF NOT EXISTS catalog_number TEXT;
 
-CREATE TABLE IF NOT EXISTS track_genres (
-  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id  UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  genre     TEXT NOT NULL,
-  sub_genre TEXT,
-  UNIQUE(track_id, genre)
-);
-
-CREATE TABLE IF NOT EXISTS track_moods (
-  id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  mood     TEXT NOT NULL,
-  UNIQUE(track_id, mood)
-);
-
-CREATE TABLE IF NOT EXISTS track_instruments (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id   UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  instrument TEXT NOT NULL,
-  UNIQUE(track_id, instrument)
-);
-
-CREATE TABLE IF NOT EXISTS track_keywords (
-  id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  keyword  TEXT NOT NULL,
-  UNIQUE(track_id, keyword)
-);
-
-CREATE TABLE IF NOT EXISTS track_rights (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id         UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  name             TEXT NOT NULL,
-  role             TEXT NOT NULL,
-  percentage       DECIMAL(5,2) NOT NULL CHECK (percentage >= 0 AND percentage <= 100),
-  pro_organization TEXT,
-  created_at       TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS track_versions (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  track_id        UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-  version_type    TEXT NOT NULL,
-  local_file_path TEXT,               -- object key for this version's file
-  file_name       TEXT NOT NULL,
-  file_size       BIGINT,
-  created_at      TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE track_versions DROP COLUMN IF EXISTS google_drive_file_id;
-ALTER TABLE track_versions ADD COLUMN IF NOT EXISTS local_file_path TEXT;
+-- track_genres / track_moods / track_instruments / track_keywords / track_rights /
+-- track_versions are retired as of 2026-09-22 (zero rows in production at the time):
+-- genre/mood/instruments/keywords fold into the plain columns above; rights-splitting
+-- isn't needed (every track is 100% HRL/CMLP-owned — Kamil, 2026-09-22); versions had
+-- no real usage. See tracks_legacy_2026_09_22 and friends on the VPS if ever needed.
 
 -- ─── Lyrics ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS lyrics (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  track_id               UUID REFERENCES tracks(id) ON DELETE SET NULL,
+  track_id               INTEGER REFERENCES tracks(id) ON DELETE SET NULL,
   title                  TEXT NOT NULL,
   artist                 TEXT,
   content                TEXT NOT NULL DEFAULT '',
@@ -178,7 +143,7 @@ CREATE TABLE IF NOT EXISTS playlists (
 CREATE TABLE IF NOT EXISTS playlist_tracks (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   playlist_id   UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
-  track_id      UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+  track_id      INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
   position      INTEGER NOT NULL,
   track_comment TEXT,
   UNIQUE(playlist_id, track_id)
@@ -215,7 +180,7 @@ CREATE TABLE IF NOT EXISTS tracking_events (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shareable_link_id UUID NOT NULL REFERENCES shareable_links(id) ON DELETE CASCADE,
   event_type        TEXT NOT NULL,
-  track_id          UUID REFERENCES tracks(id) ON DELETE SET NULL,
+  track_id          INTEGER REFERENCES tracks(id) ON DELETE SET NULL,
   recipient_email   TEXT,
   ip_address        INET,
   user_agent        TEXT,
@@ -273,14 +238,13 @@ CREATE TABLE IF NOT EXISTS white_label_channels (
 CREATE TABLE IF NOT EXISTS channel_tracks (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   channel_id UUID NOT NULL REFERENCES white_label_channels(id) ON DELETE CASCADE,
-  track_id   UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+  track_id   INTEGER NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
   position   INTEGER NOT NULL,
   added_at   TIMESTAMPTZ DEFAULT now(),
   UNIQUE(channel_id, track_id)
 );
 
 -- ─── Indexes ────────────────────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_tracks_user        ON tracks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tracks_created     ON tracks(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tracks_public      ON tracks(is_public);
 CREATE INDEX IF NOT EXISTS idx_tracks_title_trgm  ON tracks USING gin(title gin_trgm_ops);

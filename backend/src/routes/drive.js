@@ -2,6 +2,7 @@ const express  = require("express");
 const router   = express.Router();
 const drive    = require("../services/googleDrive");
 const { query, queryOne, queryAll } = require("../db/pool");
+const { catalogQuery } = require("../db/catalogPool");
 const { parseBuffer } = require("music-metadata");
 
 const AUDIO_MIMES = [
@@ -63,18 +64,24 @@ router.post("/import", async (req, res) => {
   // Clean title from filename
   const title = meta.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
 
+  // Shared catalog, no per-user ownership; Drive provenance lives in metadata (the
+  // dedicated google_drive_file_id column was dropped from the schema a while ago —
+  // this route referenced it anyway and would have failed on every real call; fixed
+  // as part of the 2026-09-22 catalog unification).
   const existing = await queryOne(
-    "SELECT id FROM tracks WHERE user_id = $1 AND google_drive_file_id = $2",
-    [req.userId, fileId]
+    "SELECT id FROM tracks WHERE metadata->>'google_drive_file_id' = $1",
+    [fileId]
   );
   if (existing) return res.json({ track: existing, imported: false, message: "Already in library" });
 
-  const { rows: [track] } = await query(
-    `INSERT INTO tracks (user_id, title, artist, file_name, file_size, mime_type,
-       google_drive_file_id, source, clearance_status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'google_drive', 'not_cleared')
+  // Straight to cmlp (not the hrl_sync/FDW pool) — see db/catalogPool.js for why.
+  const { rows: [track] } = await catalogQuery(
+    `INSERT INTO tracks (title, artist, filename, file_size, mime_type,
+       metadata, source, clearance_status, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'google_drive', 'not_cleared', 'active')
      RETURNING *`,
-    [req.userId, title, "Unknown", meta.name, parseInt(meta.size || "0"), meta.mimeType, fileId]
+    [title, "Unknown", meta.name, parseInt(meta.size || "0"), meta.mimeType,
+     JSON.stringify({ google_drive_file_id: fileId })]
   );
 
   res.json({ track, imported: true });
@@ -91,12 +98,17 @@ router.post("/import-bulk", async (req, res) => {
     fileIds.map(async (fileId) => {
       const meta  = await drive.getFileMeta(req.userId, fileId);
       const title = meta.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-      const { rows: [track] } = await query(
-        `INSERT INTO tracks (user_id, title, artist, file_name, file_size, mime_type,
-           google_drive_file_id, source, clearance_status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'google_drive','not_cleared')
-         ON CONFLICT DO NOTHING RETURNING *`,
-        [req.userId, title, "Unknown", meta.name, parseInt(meta.size || "0"), meta.mimeType, fileId]
+      // Same idempotency check as the single-file /import above — bulk has no unique
+      // constraint to lean on for this any more (google_drive_file_id now lives in metadata).
+      const already = await queryOne("SELECT id FROM tracks WHERE metadata->>'google_drive_file_id' = $1", [fileId]);
+      if (already) return already;
+      // Straight to cmlp (not the hrl_sync/FDW pool) — see db/catalogPool.js for why.
+      const { rows: [track] } = await catalogQuery(
+        `INSERT INTO tracks (title, artist, filename, file_size, mime_type, metadata, source, clearance_status, status)
+         VALUES ($1,$2,$3,$4,$5,$6,'google_drive','not_cleared','active')
+         RETURNING *`,
+        [title, "Unknown", meta.name, parseInt(meta.size || "0"), meta.mimeType,
+         JSON.stringify({ google_drive_file_id: fileId })]
       );
       return track;
     })

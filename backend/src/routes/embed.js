@@ -14,7 +14,7 @@ router.get("/:token", async (req, res) => {
   if (link.expires_at && new Date(link.expires_at) < new Date()) return res.status(410).json({ error: "Expired" });
 
   const tracks = await queryAll(
-    `SELECT t.id,t.title,t.artist,t.duration,t.bpm,t.key,t.file_name,
+    `SELECT t.id,t.title,t.artist,t.duration_ms/1000 AS duration,t.bpm,t.musical_key AS key,t.filename AS file_name,
        pt.position,pt.track_comment
      FROM playlist_tracks pt JOIN tracks t ON t.id = pt.track_id
      WHERE pt.playlist_id = $1 ORDER BY pt.position`,

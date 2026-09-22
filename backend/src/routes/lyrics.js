@@ -49,7 +49,7 @@ router.get("/", optionalAuth, async (req, res) => {
 router.get("/:id", optionalAuth, async (req, res) => {
   const row = await queryOne(
     `SELECT l.*, t.title AS track_title, t.artist AS track_artist,
-       t.bpm, t.key, t.duration
+       t.bpm, t.musical_key AS key, t.duration_ms/1000 AS duration
      FROM lyrics l
      LEFT JOIN tracks t ON t.id = l.track_id
      WHERE l.id = $1 AND (l.is_public = true OR l.user_id = $2)`,

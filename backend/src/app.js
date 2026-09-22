@@ -126,7 +126,8 @@ app.use("/api/contacts", authMiddleware, contactsRoutes);
 app.use("/api/projects", authMiddleware, projectsRoutes);
 
 app.post("/api/ai/analyze-track/:id", authMiddleware, async (req, res) => {
-  const { rows } = await pool.query("SELECT * FROM tracks WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
+  // Shared catalog: any logged-in user can request this, not just the uploader.
+  const { rows } = await pool.query("SELECT *, musical_key AS key FROM tracks WHERE id=$1", [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: "Track not found" });
   res.json(await aiService.detectMoodAndGenre(rows[0]));
 });

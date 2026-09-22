@@ -169,7 +169,29 @@ async function check(name, fn) {
   });
 
   let localTrackId;
-  const fakeAudio = Buffer.from("ID3\x03\x00\x00\x00" + "x".repeat(4096));
+  // A real (if minimal) WAV: magic-byte content detection (music-metadata) needs an
+  // actual container, not just a plausible-looking header — a hand-rolled fake ID3
+  // prefix used to pass here, but doesn't any more: parseFile() no longer throws on
+  // it, it just returns format:{} (no .container), same as the "reject" path below
+  // was designed to catch. This one produces a real format.container = 'WAVE'.
+  function minimalWav(dataBytes) {
+    const buf = Buffer.alloc(44 + dataBytes);
+    buf.write("RIFF", 0);
+    buf.writeUInt32LE(36 + dataBytes, 4);
+    buf.write("WAVE", 8);
+    buf.write("fmt ", 12);
+    buf.writeUInt32LE(16, 16);          // fmt chunk size
+    buf.writeUInt16LE(1, 20);           // PCM
+    buf.writeUInt16LE(1, 22);           // channels
+    buf.writeUInt32LE(44100, 24);       // sample rate
+    buf.writeUInt32LE(44100 * 2, 28);   // byte rate
+    buf.writeUInt16LE(2, 32);           // block align
+    buf.writeUInt16LE(16, 34);          // bits per sample
+    buf.write("data", 36);
+    buf.writeUInt32LE(dataBytes, 40);
+    return buf;
+  }
+  const fakeAudio = minimalWav(4096);
 
   await check("upload rejects a non-audio file → 400", async () => {
     const r = await request(app)
@@ -185,7 +207,11 @@ async function check(name, fn) {
       .set("Authorization", `Bearer ${adminToken}`)
       .field("title", "VPS Master")
       .field("artist", "HRL")
-      .attach("file", fakeAudio, { filename: "vps master.mp3", contentType: "audio/mpeg" });
+      // music-metadata's parseFile() (unlike parseBuffer()) uses the file extension as
+      // a format hint and does NOT reliably fall back to content-sniffing on a mismatch
+      // — a real gotcha (a user renaming a real .wav to .mp3 would get wrongly rejected
+      // in production too), independent of this test. Extension must match content.
+      .attach("file", fakeAudio, { filename: "vps master.wav", contentType: "audio/wav" });
     assert.strictEqual(r.status, 201, JSON.stringify(r.body));
     assert.strictEqual(r.body.source, "local");
     assert(r.body.local_file_path, "local_file_path stored");
@@ -217,15 +243,15 @@ async function check(name, fn) {
   });
 
   await check("uploaded object landed in the store, not the staging dir", async () => {
-    const { rows } = await pool.query("SELECT local_file_path FROM tracks WHERE id=$1", [localTrackId]);
-    const key = rows[0].local_file_path;
+    const { rows } = await pool.query("SELECT object_key FROM tracks WHERE id=$1", [localTrackId]);
+    const key = rows[0].object_key;
     assert(fs.existsSync(path.join(STORE_DIR, key)), "object in store");
     assert(!fs.existsSync(path.join(__dirname, "../uploads/.staging", key)), "staging temp cleaned up");
   });
 
   await check("deleting a local track removes its object", async () => {
-    const { rows } = await pool.query("SELECT local_file_path FROM tracks WHERE id=$1", [localTrackId]);
-    const objectPath = path.join(STORE_DIR, rows[0].local_file_path);
+    const { rows } = await pool.query("SELECT object_key FROM tracks WHERE id=$1", [localTrackId]);
+    const objectPath = path.join(STORE_DIR, rows[0].object_key);
     assert(fs.existsSync(objectPath), "object exists before delete");
     const r = await request(app).delete(`/api/tracks/${localTrackId}`).set("Authorization", `Bearer ${adminToken}`);
     assert.strictEqual(r.status, 200);

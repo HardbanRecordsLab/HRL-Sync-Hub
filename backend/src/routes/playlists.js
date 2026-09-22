@@ -18,8 +18,8 @@ router.get("/share/:token", optionalAuth, async (req, res) => {
     return res.status(410).json({ error: "Link expired" });
 
   const tracks = await queryAll(
-    `SELECT t.id, t.title, t.artist, t.duration, t.bpm, t.key,
-            t.file_name, t.mime_type, t.source,
+    `SELECT t.id, t.title, t.artist, t.duration_ms/1000 AS duration, t.bpm, t.musical_key AS key,
+            t.filename AS file_name, t.mime_type, t.source,
             pt.id AS pt_id, pt.position, pt.track_comment
      FROM playlist_tracks pt JOIN tracks t ON t.id = pt.track_id
      WHERE pt.playlist_id = $1 ORDER BY pt.position`,
@@ -72,13 +72,11 @@ router.get("/:id", async (req, res) => {
   if (!pl) return res.status(404).json({ error: "Not found" });
 
   const tracks = await queryAll(
-    `SELECT t.id,t.title,t.artist,t.duration,t.bpm,t.key,t.clearance_status,
-            t.file_name,t.source,
-            pt.id AS pt_id,pt.position,pt.track_comment,
-            COALESCE(json_agg(DISTINCT jsonb_build_object('genre',tg.genre)) FILTER (WHERE tg.id IS NOT NULL),'[]') AS track_genres
+    `SELECT t.id,t.title,t.artist,t.duration_ms/1000 AS duration,t.bpm,t.musical_key AS key,t.clearance_status,
+            t.filename AS file_name,t.source,t.genre,
+            pt.id AS pt_id,pt.position,pt.track_comment
      FROM playlist_tracks pt JOIN tracks t ON t.id=pt.track_id
-     LEFT JOIN track_genres tg ON tg.track_id=t.id
-     WHERE pt.playlist_id=$1 GROUP BY t.id,pt.id ORDER BY pt.position`,
+     WHERE pt.playlist_id=$1 ORDER BY pt.position`,
     [pl.id]
   );
 
@@ -117,7 +115,8 @@ router.post("/:id/tracks", async (req, res) => {
   const pl = await queryOne("SELECT id FROM playlists WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
   if (!pl) return res.status(404).json({ error: "Playlist not found" });
 
-  const track = await queryOne("SELECT id FROM tracks WHERE id=$1 AND user_id=$2", [track_id, req.userId]);
+  // Shared catalog: existence check only, no per-user ownership on tracks.
+  const track = await queryOne("SELECT id FROM tracks WHERE id=$1", [track_id]);
   if (!track) return res.status(404).json({ error: "Track not found" });
 
   const exists = await queryOne("SELECT id FROM playlist_tracks WHERE playlist_id=$1 AND track_id=$2", [req.params.id, track_id]);
