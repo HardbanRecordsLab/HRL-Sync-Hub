@@ -245,10 +245,20 @@ CREATE TABLE IF NOT EXISTS channel_tracks (
 );
 
 -- ─── Indexes ────────────────────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_tracks_created     ON tracks(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_tracks_public      ON tracks(is_public);
-CREATE INDEX IF NOT EXISTS idx_tracks_title_trgm  ON tracks USING gin(title gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_tracks_artist_trgm ON tracks USING gin(artist gin_trgm_ops);
+-- Postgres can't index a foreign table (production's `tracks` — see the comment on
+-- that CREATE TABLE above) — CREATE INDEX errors there ("cannot create index on
+-- relation ... because it is a foreign table"). migrate.js already catches and
+-- logs a failed schema application without crashing the app, but skipping outright
+-- when relkind isn't 'r' (ordinary table) avoids the noisy error on every boot.
+DO $$
+BEGIN
+  IF (SELECT relkind FROM pg_class WHERE relname = 'tracks' AND relnamespace = 'public'::regnamespace) = 'r' THEN
+    CREATE INDEX IF NOT EXISTS idx_tracks_created     ON tracks(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_tracks_public      ON tracks(is_public);
+    CREATE INDEX IF NOT EXISTS idx_tracks_title_trgm  ON tracks USING gin(title gin_trgm_ops);
+    CREATE INDEX IF NOT EXISTS idx_tracks_artist_trgm ON tracks USING gin(artist gin_trgm_ops);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_lyrics_user        ON lyrics(user_id);
 CREATE INDEX IF NOT EXISTS idx_lyrics_track       ON lyrics(track_id);
 CREATE INDEX IF NOT EXISTS idx_lyrics_public      ON lyrics(is_public);
