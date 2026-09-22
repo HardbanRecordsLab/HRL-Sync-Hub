@@ -218,6 +218,22 @@ async function check(name, fn) {
     localTrackId = r.body.id;
   });
 
+  await check("real audio with a MISMATCHED extension is still accepted (regression, 2026-09-22)", async () => {
+    // Real .wav bytes named .mp3 — must be accepted on content, not the filename.
+    // This exact case (parseFile()'s extension hint, not real content-sniffing)
+    // wrongly rejected a real upload in production once already (see the "this bit
+    // us" comment on the upload handler) and was masked in this test suite by a
+    // fake buffer that never triggered this path at all.
+    const r = await request(app)
+      .post("/api/tracks/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .field("title", "Mislabeled File")
+      .field("artist", "HRL")
+      .attach("file", fakeAudio, { filename: "renamed-by-mistake.mp3", contentType: "audio/mpeg" });
+    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
+    await request(app).delete(`/api/tracks/${r.body.id}`).set("Authorization", `Bearer ${adminToken}`);
+  });
+
   await check("owner streams the local file → 200 + bytes", async () => {
     const r = await request(app)
       .get(`/api/tracks/stream/${localTrackId}?token=${adminToken}`);

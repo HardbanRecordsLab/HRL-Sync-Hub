@@ -8,7 +8,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const { parseFile } = require("music-metadata");
+const { parseBuffer } = require("music-metadata");
 
 const { requireAdmin } = require("../middleware/auth");
 
@@ -174,12 +174,21 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   const stagingLabel = req.file.filename; // multer's random staging name — only used for logs/quarantine
   const size = req.file.size;
 
+  // Read once, reuse for both parsing and hashing below.
+  const fileBuffer = await fs.promises.readFile(tmpPath);
+
   let common = {};
   let format = {};
   let parseFailed = false;
   let parseError = null;
   try {
-    const meta = await parseFile(tmpPath);
+    // parseBuffer(), not parseFile(path) — parseFile uses the file extension as a
+    // format hint and does NOT reliably fall back to content-sniffing on a mismatch
+    // (confirmed live, 2026-09-22: a .wav named .mp3 came back with an empty format,
+    // same failure mode as real garbage). parseBuffer looks at the actual bytes only,
+    // which is what "is this really audio" should mean regardless of what a client
+    // (or a careless rename) claims the file is.
+    const meta = await parseBuffer(fileBuffer);
     common = meta.common || {};
     format = meta.format || {};
   } catch (e) {
@@ -192,7 +201,7 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   // it doesn't throw on garbage input — it just returns an empty format
   // object (no `container`, no `codec`). A real audio file always has
   // `format.container` set, so that's the actual signal to check, not
-  // whether parseFile() threw. Reject here instead of the previous
+  // whether parseBuffer() threw. Reject here instead of the previous
   // silent-continue, which let anything through as long as the
   // client-supplied MIME type started with "audio/".
   if (parseFailed || !format.container) {
@@ -201,7 +210,7 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
     // gone before anyone could inspect it). Keep the last 20 rejects so a
     // real bug can be reproduced from the actual bytes, not guessed at.
     await quarantineRejectedUpload(tmpPath, stagingLabel);
-    logger.warn(`Rejected upload ${stagingLabel}: not a recognizable audio file (${parseFailed ? `parseFile threw: ${parseError}` : "empty format.container"})`);
+    logger.warn(`Rejected upload ${stagingLabel}: not a recognizable audio file (${parseFailed ? `parseBuffer threw: ${parseError}` : "empty format.container"})`);
     return res.status(400).json({ error: "File does not look like a valid audio file" });
   }
 
@@ -218,7 +227,6 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
   // uploaded through CMLP resolves to the same key, so the shared bucket
   // (see handbook §9/§12, decided 2026-09-17) naturally dedupes instead of
   // storing the same bytes twice under two different names.
-  const fileBuffer = await fs.promises.readFile(tmpPath);
   const contentHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
   const ext = path.extname(req.file.originalname) || path.extname(stagingLabel);
   const objectKey = `${contentHash}${ext}`;
@@ -406,7 +414,10 @@ router.post("/:id/tag-via-metadata-engine", requireAdmin, async (req, res) => {
   let format = {};
   let parseFailed = false;
   try {
-    const parsed = await parseFile(tmpPath);
+    // parseBuffer(), not parseFile(path) — see the /upload handler above for why
+    // (extension-based hinting, not real content-sniffing). taggedBuffer is already
+    // in memory, no need to even go through tmpPath for this check.
+    const parsed = await parseBuffer(taggedBuffer);
     format = parsed.format || {};
   } catch (e) {
     parseFailed = true;
