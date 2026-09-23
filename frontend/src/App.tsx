@@ -22,6 +22,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const LyricsCatalog = lazy(() => import("./pages/LyricsCatalog"));
 const BusinessHub = lazy(() => import("./pages/BusinessHub"));
 const PublicLibrary = lazy(() => import("./pages/PublicLibrary"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -55,6 +57,8 @@ function AppRoutes() {
         {/* Public */}
         <Route path="/share/:token" element={<SharedPlaylist />} />
         <Route path="/public-library" element={<PublicLibrary />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* Authenticated */}
         <Route path="/library" element={<Protected><Library /></Protected>} />

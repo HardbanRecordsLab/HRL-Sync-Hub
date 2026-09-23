@@ -181,9 +181,14 @@ export default function SharedPlaylist() {
       )}
 
       {/* Footer */}
-      <div className="text-center py-4 border-t border-border/50">
+      <div className="text-center py-4 border-t border-border/50 space-y-1">
         <p className="hrl-label text-muted-foreground">
           Powered by <a href="https://hardbanrecordslab.online" target="_blank" rel="noreferrer" className="text-violet-500/70 hover:text-violet-400 transition">HRL SYNC</a>
+        </p>
+        <p className="hrl-label text-muted-foreground/60 text-xs">
+          <a href="/terms" className="hover:text-foreground transition">Regulamin</a>
+          {" · "}
+          <a href="/privacy" className="hover:text-foreground transition">Prywatność</a>
         </p>
       </div>
     </div>
