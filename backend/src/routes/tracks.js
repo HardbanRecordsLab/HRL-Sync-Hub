@@ -286,7 +286,6 @@ router.get("/", async (req, res) => {
   const countParams = [...params];
   const { rows: [{ count }] } = await query(`SELECT COUNT(*) FROM tracks t WHERE ${where}`, countParams);
 
-  params.push(parseInt(limit), offset);
   const rows = await queryAll(
     `SELECT t.*, t.musical_key AS key, t.filename AS file_name, t.object_key AS local_file_path,
        t.duration_ms/1000 AS duration
