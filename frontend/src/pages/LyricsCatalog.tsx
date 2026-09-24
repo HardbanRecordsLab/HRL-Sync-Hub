@@ -43,21 +43,35 @@ interface LyricsEntry {
   track_artist?: string;
 }
 
-// A section header is a short standalone line entirely wrapped in ()/[]/（）,
-// e.g. "(Chorus)", "[Verse 1]", "(合唱)" - everything else is stanza text.
-const SECTION_RE = /^[([（]\s*(.+?)\s*[)\]）]$/;
+// A section header is a short standalone line wrapped in ()/[]/（）, e.g.
+// "(Chorus)", "[Verse 1]", "(合唱)" - some source files additionally wrap the
+// whole line in markdown bold (**[Chorus]**), so that's stripped first.
+// Everything that doesn't match is stanza text.
+const SECTION_RE = /^\*{0,2}[([（]\s*(.+?)\s*[)\]）]\*{0,2}$/;
 
 interface LyricsBlock {
   heading: string | null;
   lines: string[];
 }
 
+// Some source files restate the title as a first line (e.g. "**Tytuł: X**")
+// even though the dialog already shows it in the header - drop that if present.
+const RESTATED_TITLE_RE = /^\*{0,2}(tytu[łl]|title)\s*:\s*.+\*{0,2}$/i;
+
 function parseLyricsBlocks(content: string): LyricsBlock[] {
   const blocks: LyricsBlock[] = [];
   let current: LyricsBlock = { heading: null, lines: [] };
   let touched = false;
 
-  for (const raw of content.split(/\r?\n/)) {
+  const lines = content.split(/\r?\n/);
+  if (lines.some((l) => l.trim() !== "")) {
+    const firstIdx = lines.findIndex((l) => l.trim() !== "");
+    if (firstIdx !== -1 && RESTATED_TITLE_RE.test(lines[firstIdx].trim())) {
+      lines.splice(firstIdx, 1);
+    }
+  }
+
+  for (const raw of lines) {
     const line = raw.trim();
     const sectionMatch = line.length > 0 && line.length <= 40 ? line.match(SECTION_RE) : null;
 
