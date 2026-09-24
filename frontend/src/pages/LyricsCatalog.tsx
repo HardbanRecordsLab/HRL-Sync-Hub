@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  FileText, Plus, Globe, Lock, Edit2, Trash2, Eye, Search, Music2, Loader2,
+  FileText, Plus, Globe, Lock, Edit2, Trash2, Eye, Search, Music2, Loader2, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,43 @@ interface LyricsEntry {
   track_artist?: string;
 }
 
+// A section header is a short standalone line entirely wrapped in ()/[]/（）,
+// e.g. "(Chorus)", "[Verse 1]", "(合唱)" - everything else is stanza text.
+const SECTION_RE = /^[([（]\s*(.+?)\s*[)\]）]$/;
+
+interface LyricsBlock {
+  heading: string | null;
+  lines: string[];
+}
+
+function parseLyricsBlocks(content: string): LyricsBlock[] {
+  const blocks: LyricsBlock[] = [];
+  let current: LyricsBlock = { heading: null, lines: [] };
+  let touched = false;
+
+  for (const raw of content.split(/\r?\n/)) {
+    const line = raw.trim();
+    const sectionMatch = line.length > 0 && line.length <= 40 ? line.match(SECTION_RE) : null;
+
+    if (sectionMatch) {
+      if (touched) blocks.push(current);
+      current = { heading: sectionMatch[1], lines: [] };
+      touched = true;
+    } else if (line === "") {
+      if (current.lines.length > 0) {
+        blocks.push(current);
+        current = { heading: null, lines: [] };
+        touched = true;
+      }
+    } else {
+      current.lines.push(line);
+      touched = true;
+    }
+  }
+  if (current.lines.length > 0 || current.heading) blocks.push(current);
+  return blocks;
+}
+
 const EMPTY_FORM = {
   title: "", artist: "", content: "", language: "en",
   is_explicit: false, is_public: false, status: "draft",
@@ -75,6 +112,11 @@ export default function LyricsCatalog() {
     queryFn: () => api.get(`/api/lyrics/${viewingId}`),
     enabled: !!viewingId,
   });
+
+  const viewingBlocks = useMemo(
+    () => (viewing?.content ? parseLyricsBlocks(viewing.content) : []),
+    [viewing?.content]
+  );
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -286,16 +328,61 @@ export default function LyricsCatalog() {
       </div>
 
       <Dialog open={!!viewingId} onOpenChange={() => setViewingId(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="hrl-title text-2xl">
-              {viewing?.title}
-              {viewing?.artist && <span className="text-muted-foreground font-normal text-base ml-2">— {viewing.artist}</span>}
-            </DialogTitle>
-          </DialogHeader>
-          <pre className="whitespace-pre-wrap font-mono text-sm leading-loose mt-3 text-foreground/90">
-            {viewing?.content || "No content yet."}
-          </pre>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+          <div
+            className="relative overflow-hidden rounded-t-lg px-6 pt-6 pb-5 border-b border-border/50"
+            style={{
+              background:
+                "radial-gradient(60rem 20rem at 0% -20%, rgba(139,92,246,0.16), transparent 60%)," +
+                "radial-gradient(40rem 20rem at 100% -10%, rgba(34,211,238,0.10), transparent 55%)",
+            }}
+          >
+            <DialogHeader>
+              <p className="hrl-label text-muted-foreground mb-1.5">
+                {LANGS.find((l) => l.v === viewing?.language)?.l ?? viewing?.language}
+                {viewing?.is_explicit && <span className="ml-2 hrl-badge-red">E</span>}
+              </p>
+              <DialogTitle className="hrl-title text-4xl leading-none">{viewing?.title}</DialogTitle>
+              {viewing?.artist && (
+                <p className="text-muted-foreground mt-1.5">{viewing.artist}</p>
+              )}
+              {viewing?.track_title && (
+                <p className="hrl-badge-dim inline-flex items-center gap-1.5 mt-3 w-fit">
+                  <Music2 className="w-2.5 h-2.5" />{viewing.track_title}
+                </p>
+              )}
+            </DialogHeader>
+          </div>
+
+          <div className="px-6 py-6 space-y-6">
+            {viewingBlocks.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No content yet.</p>
+            ) : (
+              viewingBlocks.map((block, i) => (
+                <div key={i}>
+                  {block.heading && (
+                    <p className="hrl-label mb-2" style={{ color: "rgb(var(--accent))" }}>
+                      {block.heading}
+                    </p>
+                  )}
+                  <div className="space-y-1">
+                    {block.lines.map((line, j) => (
+                      <p key={j} className="text-[15px] leading-relaxed text-foreground/90">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 px-6 py-4 border-t border-border/50 bg-white/[0.02]">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" style={{ color: "rgb(var(--accent))" }} />
+            <p className="hrl-label text-muted-foreground normal-case tracking-normal">
+              {viewing?.copyright_notice || "© 2026 HardbanRecords Lab / CMLP. All rights reserved."}
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>
