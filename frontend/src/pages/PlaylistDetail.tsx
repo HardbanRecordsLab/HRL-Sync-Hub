@@ -115,7 +115,7 @@ export default function PlaylistDetail() {
         {/* Track list */}
         {(playlist?.tracks ?? []).length === 0 ? (
           <div className="text-center py-16">
-            <p className="hrl-title text-2xl text-muted-foreground mb-2">EMPTY PLAYLIST</p>
+            <p className="hrl-title text-2xl text-muted-foreground mb-2">This playlist is empty</p>
             <p className="hrl-label text-muted-foreground mb-4">Go to Library and add tracks to this playlist</p>
             <Button variant="outline" className="hrl-label" onClick={() => navigate("/library")}>
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Browse Library
@@ -125,7 +125,7 @@ export default function PlaylistDetail() {
           <div className="hrl-card overflow-hidden">
             {/* Header row */}
             <div className="grid px-4 py-2 border-b border-border" style={{ gridTemplateColumns: "28px 28px 1fr 80px 60px 60px 36px" }}>
-              {["", "#", "TRACK", "CLEARANCE", "BPM", "DUR", ""].map((h, i) => (
+              {["", "#", "Track", "Clearance", "BPM", "DUR", ""].map((h, i) => (
                 <span key={i} className="hrl-label text-muted-foreground">{h}</span>
               ))}
             </div>
@@ -169,7 +169,7 @@ export default function PlaylistDetail() {
                     {track.track_comment && <p className="hrl-label text-muted-foreground italic">{track.track_comment}</p>}
                   </div>
                   <span className={track.clearance_status === "cleared_ready" ? "hrl-badge-red text-[9px]" : "hrl-badge-dim text-[9px]"}>
-                    {track.clearance_status === "cleared_ready" ? "CLEARED" : track.clearance_status === "in_progress" ? "IN PROG" : "PENDING"}
+                    {track.clearance_status === "cleared_ready" ? "Cleared" : track.clearance_status === "in_progress" ? "In progress" : "Pending"}
                   </span>
                   <span className="mono text-sm text-muted-foreground">{track.bpm ?? "—"}</span>
                   <span className="mono text-sm text-muted-foreground">{fmt(track.duration)}</span>

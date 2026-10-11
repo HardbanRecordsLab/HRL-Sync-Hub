@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Play, MoreVertical, Loader2, Upload, Plus, Music2, ListPlus,
 } from "lucide-react";
@@ -28,29 +29,54 @@ function fmtBytes(n: number) {
 }
 
 const CLEARANCE_LABEL: Record<string, string> = {
-  cleared_ready: "Cleared", in_progress: "In Progress", not_cleared: "Not Cleared",
+  cleared_ready: "Cleared", in_progress: "In progress", not_cleared: "Not cleared",
 };
 
 export default function Library() {
   const qc = useQueryClient();
   const player = usePlayer();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [search, setSearch] = useState("");
+  const [params, setParams] = useSearchParams();
+  const [search, setSearch] = useState(params.get("q") ?? "");
+  const [debounced, setDebounced] = useState(search);
   const [clearanceFilter, setClearanceFilter] = useState("all");
   const [uploadProg, setUploadProg] = useState<{ done: number; total: number } | null>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
 
-  const { data: tracksData, isLoading } = useQuery({
-    queryKey: ["tracks", search, clearanceFilter],
-    queryFn: async () => {
-      const res = await api.get<{ tracks: any[] }>("/api/tracks", {
-        search: search || undefined,
-        clearance: clearanceFilter !== "all" ? clearanceFilter : undefined,
-      });
-      return res.tracks || [];
-    },
+  // Sidebar search writes ?q= — follow it.
+  useEffect(() => { const q = params.get("q") ?? ""; setSearch(q); setDebounced(q); }, [params]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const PAGE = 100;
+  const tracksQuery = useInfiniteQuery({
+    queryKey: ["tracks", debounced, clearanceFilter],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => api.get<{ tracks: any[]; total: number; page: number }>("/api/tracks", {
+      search: debounced || undefined,
+      clearance: clearanceFilter !== "all" ? clearanceFilter : undefined,
+      page: pageParam, limit: PAGE,
+    }),
+    getNextPageParam: (last, all) => (all.length * PAGE < last.total ? last.page + 1 : undefined),
   });
-  const tracks = Array.isArray(tracksData) ? tracksData : [];
+  const { isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = tracksQuery;
+  const tracks = tracksQuery.data?.pages.flatMap((p) => p.tracks) ?? [];
+  const total = tracksQuery.data?.pages[0]?.total ?? 0;
+
+  // Load the next page when the bottom of the list scrolls into view.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((e) => {
+      if (e[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    }, { rootMargin: "600px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, tracks.length]);
 
   const { data: storage } = useQuery<{ driver: string; bucket: string; localFiles: number; localBytes: number; totalTracks: number; maxUploadBytes: number }>({
     queryKey: ["tracks-storage"],
@@ -118,142 +144,131 @@ export default function Library() {
   return (
     <Layout>
       <div className="animate-fade-in space-y-6">
-        {/* Header */}
-        <div className="flex items-end justify-between">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="hrl-title text-5xl mb-1">LIBRARY</h1>
-            <p className="hrl-label text-muted-foreground">
-              {tracks.length} track{tracks.length !== 1 ? "s" : ""}
-              {storage ? ` · ${storage.localFiles} in ${storage.driver === "s3" ? "MinIO" : "local store"} · ${fmtBytes(storage.localBytes)}` : ""}
+            <h1 className="hrl-title">Library</h1>
+            <p className="text-sm text-muted-foreground">
+              {isLoading ? "Loading…" : debounced || clearanceFilter !== "all"
+                ? `${total} matching track${total !== 1 ? "s" : ""}`
+                : `${total} track${total !== 1 ? "s" : ""}`}
+              {storage ? ` · ${fmtBytes(storage.localBytes)} of audio` : ""}
             </p>
           </div>
           <div className="flex gap-2">
-            <input
-              type="file" ref={fileInputRef} className="hidden" accept="audio/*" multiple
-              onChange={handleUpload}
-            />
+            <input type="file" ref={fileInputRef} className="hidden" accept="audio/*" multiple onChange={handleUpload} />
             <Button className="hrl-btn-primary" onClick={() => fileInputRef.current?.click()} disabled={!!uploadProg}>
               {uploadProg
-                ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> Uploading {uploadProg.done}/{uploadProg.total}…</>
-                : <><Upload className="w-3.5 h-3.5 mr-2" /> Upload audio</>}
+                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Uploading {uploadProg.done}/{uploadProg.total}…</>
+                : <><Upload className="w-4 h-4 mr-2" /> Upload audio</>}
             </Button>
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input placeholder="Search tracks…" className="pl-9 h-9 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by title, artist or composer…" className="pl-9 h-10" value={search}
+              onChange={(e) => { setSearch(e.target.value); if (params.get("q")) setParams({}, { replace: true }); }}
+              aria-label="Search tracks"
+            />
           </div>
           <Select value={clearanceFilter} onValueChange={setClearanceFilter}>
-            <SelectTrigger className="w-[150px] h-9 text-sm"><SelectValue placeholder="Clearance" /></SelectTrigger>
+            <SelectTrigger className="w-[170px] h-10"><SelectValue placeholder="Clearance" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All clearance</SelectItem>
               <SelectItem value="cleared_ready">Cleared</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="not_cleared">Not Cleared</SelectItem>
+              <SelectItem value="in_progress">In progress</SelectItem>
+              <SelectItem value="not_cleared">Not cleared</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Table */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" /><span className="hrl-label">Loading tracks…</span>
+            <Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Loading tracks…</span>
           </div>
         ) : tracks.length === 0 ? (
-          <div className="text-center py-20">
-            <Music2 className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-            <p className="hrl-title text-2xl text-muted-foreground mb-2">EMPTY LIBRARY</p>
-            <p className="hrl-label text-muted-foreground mb-4">Upload audio files to the VPS to get started</p>
-            <Button className="hrl-btn-primary" onClick={() => fileInputRef.current?.click()}>
-              <Plus className="w-3.5 h-3.5 mr-2" /> Upload audio
-            </Button>
+          <div className="hrl-card text-center py-16 px-6">
+            <Music2 className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-40" />
+            {debounced || clearanceFilter !== "all" ? (
+              <p className="text-muted-foreground">No tracks match these filters.</p>
+            ) : (
+              <>
+                <p className="text-lg font-semibold mb-1">Your library is empty</p>
+                <p className="text-sm text-muted-foreground mb-5">Upload audio files to start building the catalog.</p>
+                <Button className="hrl-btn-primary" onClick={() => fileInputRef.current?.click()}>
+                  <Plus className="w-4 h-4 mr-2" /> Upload audio
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           <div className="hrl-card overflow-hidden">
-            <div className="grid px-4 py-2 border-b border-border" style={{ gridTemplateColumns: "32px 1fr 120px 80px 80px 80px 40px" }}>
-              {["#", "TRACK", "CLEARANCE", "BPM", "KEY", "DURATION", ""].map((h) => (
-                <span key={h} className="hrl-label text-muted-foreground">{h}</span>
-              ))}
+            <div className="hidden md:grid gap-4 px-4 py-2.5 border-b border-border text-xs font-medium text-muted-foreground lib-grid">
+              <span className="text-center">#</span><span>Track</span><span>Clearance</span><span>BPM</span><span>Key</span><span className="text-right">Length</span><span />
             </div>
 
             {tracks.map((track, i) => {
               const isActive = player.track?.id === track.id;
+              const clearance = track.clearance_status ?? "not_cleared";
               return (
                 <div
                   key={track.id}
                   className={cn(
-                    "grid items-center px-4 py-3 border-b border-border/50 last:border-0 cursor-pointer group transition-colors hover:bg-white/3",
-                    isActive && "bg-violet-500/8"
+                    "grid items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 border-b border-border/60 last:border-0 cursor-pointer group transition-colors hover:bg-white/[0.03] lib-grid",
+                    isActive && "bg-violet-500/10"
                   )}
-                  style={{ gridTemplateColumns: "32px 1fr 120px 80px 80px 80px 40px" }}
                   onClick={() => handlePlay(track)}
                 >
-                  <div className="w-8 flex items-center justify-center">
+                  <div className="w-8 h-8 flex items-center justify-center">
                     {isActive && player.isPlaying ? (
-                      <span className="flex gap-0.5">
+                      <span className="flex gap-0.5 items-end h-3.5">
                         {[1, 2, 3].map((b) => (
-                          <span key={b} className="w-0.5 bg-violet-500 rounded-full animate-pulse-red" style={{ height: `${8 + b * 3}px`, animationDelay: `${b * 0.15}s` }} />
+                          <span key={b} className="w-0.5 bg-violet-400 rounded-full animate-pulse-red" style={{ height: `${6 + b * 3}px`, animationDelay: `${b * 0.15}s` }} />
                         ))}
                       </span>
                     ) : (
                       <>
-                        <span className={cn("hrl-label text-muted-foreground group-hover:hidden", isActive && "hidden")}>
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
-                        <Play className={cn("w-3.5 h-3.5 text-violet-400 hidden group-hover:block", isActive && "block")} />
+                        <span className={cn("text-xs text-muted-foreground tabular-nums group-hover:hidden", isActive && "hidden")}>{i + 1}</span>
+                        <Play className={cn("w-4 h-4 text-violet-300 hidden group-hover:block", isActive && "block")} />
                       </>
                     )}
                   </div>
 
-                  <div className="min-w-0 pr-3">
-                    <p className={cn("text-sm font-medium truncate", isActive && "text-violet-400")}>{track.title}</p>
-                    <p className="hrl-label text-muted-foreground truncate">{track.artist}</p>
-                    <div className="flex gap-1 mt-1">
-                      <span className="hrl-badge-dim text-[10px] opacity-60 uppercase">{track.source === "local" ? "VPS" : track.source}</span>
-                      {track.track_genres?.slice(0, 1).map((g: any) => (
-                        <span key={g.genre} className="hrl-badge-dim">{g.genre}</span>
-                      ))}
-                    </div>
+                  <div className="min-w-0">
+                    <p className={cn("text-sm font-medium truncate", isActive && "text-violet-300")}>{track.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {track.artist}
+                      <span className="md:hidden">{[track.bpm && `${track.bpm} BPM`, track.key, fmtDur(track.duration)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+                    </p>
                   </div>
 
-                  <span className={track.clearance_status === "cleared_ready" ? "hrl-badge-red" : "hrl-badge-dim"}>
-                    {CLEARANCE_LABEL[track.clearance_status ?? "not_cleared"]}
+                  <span className={cn("hidden md:inline-flex", clearance === "cleared_ready" ? "hrl-badge-ok" : clearance === "in_progress" ? "hrl-badge-warn" : "hrl-badge-dim")}>
+                    {CLEARANCE_LABEL[clearance]}
                   </span>
-                  <span className="mono text-sm text-muted-foreground">{track.bpm ?? "—"}</span>
-                  <span className="mono text-sm text-muted-foreground">{track.key ?? "—"}</span>
-                  <span className="mono text-sm text-muted-foreground">{fmtDur(track.duration)}</span>
+                  <span className="hidden md:block text-sm text-muted-foreground tabular-nums">{track.bpm ?? "—"}</span>
+                  <span className="hidden md:block text-sm text-muted-foreground">{track.key ?? "—"}</span>
+                  <span className="hidden md:block text-sm text-muted-foreground tabular-nums text-right">{fmtDur(track.duration)}</span>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="w-7 h-7 opacity-0 group-hover:opacity-100">
-                        <MoreVertical className="w-3.5 h-3.5" />
+                      <Button variant="ghost" size="icon" className="w-8 h-8 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100" aria-label="Track actions">
+                        <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem onClick={() => (window.location.href = `/library/${track.id}`)}>
-                        View details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => (window.location.href = `/library/${track.id}?edit=1`)}>
-                        Edit metadata
-                      </DropdownMenuItem>
-
+                      <DropdownMenuItem onClick={() => navigate(`/library/${track.id}`)}>View details</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/library/${track.id}?edit=1`)}>Edit metadata</DropdownMenuItem>
                       <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <ListPlus className="w-3.5 h-3.5 mr-2" /> Add to playlist
-                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubTrigger><ListPlus className="w-4 h-4 mr-2" /> Add to playlist</DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
                             {playlists.length === 0 ? (
                               <DropdownMenuItem disabled>No playlists yet</DropdownMenuItem>
                             ) : (
                               playlists.map((pl) => (
-                                <DropdownMenuItem
-                                  key={pl.id}
-                                  onClick={() => addToPlaylist.mutate({ playlistId: pl.id, trackId: track.id })}
-                                >
+                                <DropdownMenuItem key={pl.id} onClick={() => addToPlaylist.mutate({ playlistId: pl.id, trackId: track.id })}>
                                   {pl.name}
                                 </DropdownMenuItem>
                               ))
@@ -261,7 +276,6 @@ export default function Library() {
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
-
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => { if (confirm("Remove from library? This deletes the audio file too.")) deleteMutation.mutate(track.id); }}
@@ -273,6 +287,11 @@ export default function Library() {
                 </div>
               );
             })}
+            <div ref={sentinel} className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+              {isFetchingNextPage ? <><Loader2 className="w-4 h-4 animate-spin" /> Loading more…</>
+                : hasNextPage ? <button className="hover:text-foreground" onClick={() => fetchNextPage()}>Load more</button>
+                : `Showing all ${tracks.length} tracks`}
+            </div>
           </div>
         )}
       </div>

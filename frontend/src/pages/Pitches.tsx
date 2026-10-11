@@ -104,7 +104,7 @@ export default function Pitches() {
         {/* Header */}
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="hrl-title text-5xl mb-1">PITCHES</h1>
+            <h1 className="hrl-title text-5xl mb-1">Pitches</h1>
             <p className="hrl-label text-muted-foreground">
               {playlists.length} playlist{playlists.length !== 1 ? "s" : ""} · shareable with clients
             </p>
@@ -115,7 +115,7 @@ export default function Pitches() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle className="hrl-title text-2xl">{editing ? "EDIT PLAYLIST" : "NEW PLAYLIST"}</DialogTitle>
+                <DialogTitle className="hrl-title text-2xl">{editing ? "Edit playlist" : "New playlist"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-3">
                 <div>
@@ -157,7 +157,7 @@ export default function Pitches() {
         ) : playlists.length === 0 ? (
           <div className="text-center py-20">
             <Radio className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-            <p className="hrl-title text-2xl text-muted-foreground mb-2">NO PLAYLISTS</p>
+            <p className="hrl-title text-2xl text-muted-foreground mb-2">No playlists yet</p>
             <p className="hrl-label text-muted-foreground">Create a pitch playlist to share tracks with clients</p>
           </div>
         ) : (

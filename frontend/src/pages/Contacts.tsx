@@ -65,7 +65,7 @@ export default function Contacts() {
       <div className="animate-fade-in space-y-6">
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="hrl-title text-5xl mb-1">CONTACTS</h1>
+            <h1 className="hrl-title text-5xl mb-1">Contacts</h1>
             <p className="hrl-label text-muted-foreground">{contacts.length} supervisor{contacts.length !== 1 ? "s" : ""} & clients</p>
           </div>
           <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setEditing(null); setForm(EMPTY); } }}>
@@ -105,7 +105,7 @@ export default function Contacts() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <Users className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-            <p className="hrl-title text-2xl text-muted-foreground">{search ? "NO RESULTS" : "NO CONTACTS"}</p>
+            <p className="hrl-title text-2xl text-muted-foreground">{search ? "No results" : "No contacts yet"}</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">

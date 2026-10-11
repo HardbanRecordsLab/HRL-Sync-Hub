@@ -17,9 +17,9 @@ type Status = "to_do" | "sent" | "shortlist" | "licensed" | "archived";
 const COLUMNS: { id: Status; label: string; color: string }[] = [
   { id: "to_do",     label: "TO DO",     color: "#6E648C" },
   { id: "sent",      label: "SENT",      color: "#60a5fa" },
-  { id: "shortlist", label: "SHORTLIST", color: "#fbbf24" },
-  { id: "licensed",  label: "LICENSED",  color: "#34d399" },
-  { id: "archived",  label: "ARCHIVED",  color: "#4b4558" },
+  { id: "shortlist", label: "Shortlist", color: "#fbbf24" },
+  { id: "licensed",  label: "Licensed",  color: "#34d399" },
+  { id: "archived",  label: "Archived",  color: "#4b4558" },
 ];
 
 interface Project {
@@ -67,7 +67,7 @@ export default function Projects() {
       <div className="animate-fade-in space-y-6">
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="hrl-title text-5xl mb-1">PROJECTS</h1>
+            <h1 className="hrl-title text-5xl mb-1">Projects</h1>
             <p className="hrl-label text-muted-foreground">Track pitch progress — drag cards to update status</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
@@ -75,7 +75,7 @@ export default function Projects() {
               <Button className="hrl-btn-primary"><Plus className="w-3.5 h-3.5 mr-1.5" /> New Project</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle className="hrl-title text-2xl">NEW PROJECT</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle className="hrl-title text-2xl">New project</DialogTitle></DialogHeader>
               <div className="space-y-4 mt-3">
                 <div>
                   <Label className="hrl-label mb-1.5 block">Project Name *</Label>

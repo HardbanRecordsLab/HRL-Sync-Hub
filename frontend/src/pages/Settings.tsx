@@ -23,7 +23,7 @@ export default function Settings() {
     <Layout>
       <div className="animate-fade-in space-y-6">
         <div>
-          <h1 className="hrl-title text-5xl mb-1">SETTINGS</h1>
+          <h1 className="hrl-title text-5xl mb-1">Settings</h1>
           <p className="hrl-label text-muted-foreground">Account configuration</p>
         </div>
 
@@ -73,7 +73,7 @@ function ProfileTab() {
 
   return (
     <div className="space-y-5">
-      <h2 className="hrl-title text-2xl">PROFILE</h2>
+      <h2 className="hrl-title text-2xl">Profile</h2>
       {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : (
         <>
           <div className="grid grid-cols-2 gap-4">
@@ -118,7 +118,7 @@ function SecurityTab() {
 
   return (
     <div className="space-y-5">
-      <h2 className="hrl-title text-2xl">SECURITY</h2>
+      <h2 className="hrl-title text-2xl">Security</h2>
       <div className="space-y-4 max-w-sm">
         <div>
           <Label className="hrl-label mb-1.5 block">Current Password</Label>

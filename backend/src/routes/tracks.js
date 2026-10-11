@@ -261,8 +261,11 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
 
 // ── GET /api/tracks ────────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
-  const { search, clearance, bpm_min, bpm_max, key, genre, mood, page = 1, limit = 50 } = req.query;
-  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const { search, clearance, bpm_min, bpm_max, key, genre, mood } = req.query;
+  // The UI pages through the whole catalog; cap a single page so one request stays cheap.
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const offset = (page - 1) * limit;
   const params = [];
   let where = "1=1";
 
@@ -291,12 +294,12 @@ router.get("/", async (req, res) => {
        t.duration_ms/1000 AS duration
      FROM tracks t
      WHERE ${where}
-     ORDER BY t.created_at DESC
+     ORDER BY t.created_at DESC, t.id DESC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-    [...params, parseInt(limit), offset]
+    [...params, limit, offset]
   );
 
-  res.json({ tracks: rows, total: parseInt(count), page: parseInt(page), limit: parseInt(limit) });
+  res.json({ tracks: rows, total: parseInt(count), page, limit });
 });
 
 // ── GET /api/tracks/public (Public Library) ───────────────────────────────────
@@ -449,11 +452,11 @@ router.get("/:id", async (req, res) => {
        COALESCE(t.mood, '[]') AS track_moods,
        COALESCE(t.metadata->'instruments', '[]') AS track_instruments,
        COALESCE(t.metadata->'keywords', '[]') AS track_keywords,
-       COALESCE(json_agg(DISTINCT jsonb_build_object('id',l.id,'title',l.title,'status',l.status,'language',l.language)) FILTER (WHERE l.id IS NOT NULL),'[]') AS lyrics
+       -- tracks is a postgres_fdw foreign table: no PK is known locally, so no GROUP BY t.id
+       COALESCE((SELECT json_agg(jsonb_build_object('id',l.id,'title',l.title,'status',l.status,'language',l.language))
+                 FROM lyrics l WHERE l.track_id=t.id), '[]') AS lyrics
      FROM tracks t
-     LEFT JOIN lyrics l ON l.track_id=t.id
-     WHERE t.id=$1
-     GROUP BY t.id`,
+     WHERE t.id=$1`,
     [req.params.id]
   );
   if (!track) return res.status(404).json({ error: "Track not found" });

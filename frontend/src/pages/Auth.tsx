@@ -30,9 +30,8 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src="/logo.png" alt="HRL Sync Hub" className="w-44 mx-auto mb-5 object-contain rounded-2xl bg-white/95 p-3 shadow-[0_0_40px_-8px_rgba(139,92,246,0.5)]" />
-          <p className="hrl-label hrl-gradient-text" style={{ letterSpacing: "0.2em" }}>
-            HARDBAN RECORDS LAB
-          </p>
+          <h1 className="text-xl font-semibold">Sign in to HRL Sync Hub</h1>
+          <p className="text-sm text-muted-foreground mt-1">Sync licensing catalog of Hardban Records Lab</p>
         </div>
 
         <form onSubmit={onSubmit} className="hrl-card p-6 space-y-4">
@@ -59,21 +58,21 @@ export default function AuthPage() {
           </div>
 
           {err && (
-            <p className="text-sm text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded px-3 py-2">{err}</p>
+            <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/25 rounded-lg px-3 py-2" role="alert">{err}</p>
           )}
 
           <button
             type="submit"
-            className="hrl-btn-primary w-full rounded py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+            className="hrl-btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
             disabled={submitting || !email || !password}
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            Sign In
+            Sign in
           </button>
         </form>
 
-        <p className="hrl-label text-muted-foreground text-center mt-6 opacity-50 text-[10px] tracking-widest">
-          Private library · accounts are created by an administrator
+        <p className="text-xs text-muted-foreground text-center mt-6">
+          Accounts are created by an administrator. Looking for music? <a href="/public-library" className="text-violet-300 hover:text-violet-200">Browse the public catalog</a>.
         </p>
       </div>
     </div>

@@ -53,7 +53,7 @@ export default function Analytics() {
     <Layout>
       <div className="animate-fade-in space-y-8">
         <div>
-          <h1 className="hrl-title text-5xl mb-1">ANALYTICS</h1>
+          <h1 className="hrl-title text-5xl mb-1">Analytics</h1>
           <p className="hrl-label text-muted-foreground">Track engagement across all shared pitches</p>
         </div>
 
@@ -80,7 +80,7 @@ export default function Analytics() {
             <div className="hrl-card p-5 animate-fade-in stagger-2">
               <div className="flex items-center gap-2 mb-5">
                 <TrendingUp className="w-3.5 h-3.5 text-violet-500" />
-                <h2 className="hrl-title text-xl">LAST 30 DAYS — PLAYS</h2>
+                <h2 className="hrl-title text-xl">Plays — last 30 days</h2>
               </div>
               <div className="flex items-end gap-0.5 h-16">
                 {timeseries.map((d, i) => {
@@ -109,7 +109,7 @@ export default function Analytics() {
             <div className="grid md:grid-cols-2 gap-5">
               {/* Top playlists */}
               <div className="hrl-card p-5 animate-fade-in stagger-3">
-                <h2 className="hrl-title text-xl mb-5">TOP PLAYLISTS</h2>
+                <h2 className="hrl-title text-xl mb-5">Top playlists</h2>
                 {(overview?.topPlaylists ?? []).length === 0 ? (
                   <p className="hrl-label text-muted-foreground text-center py-6">No data yet</p>
                 ) : (
@@ -132,7 +132,7 @@ export default function Analytics() {
 
               {/* Top tracks */}
               <div className="hrl-card p-5 animate-fade-in stagger-4">
-                <h2 className="hrl-title text-xl mb-5">TOP TRACKS</h2>
+                <h2 className="hrl-title text-xl mb-5">Top tracks</h2>
                 {(overview?.topTracks ?? []).length === 0 ? (
                   <p className="hrl-label text-muted-foreground text-center py-6">No data yet</p>
                 ) : (
@@ -154,7 +154,7 @@ export default function Analytics() {
 
             {/* Recent events */}
             <div className="hrl-card p-5 animate-fade-in stagger-5">
-              <h2 className="hrl-title text-xl mb-5">RECENT ACTIVITY</h2>
+              <h2 className="hrl-title text-xl mb-5">Recent activity</h2>
               {(overview?.recentEvents ?? []).length === 0 ? (
                 <p className="hrl-label text-muted-foreground text-center py-6">No activity yet — share a pitch to start tracking</p>
               ) : (

@@ -117,7 +117,7 @@ export default function TrackDetail() {
   if (!track) return (
     <Layout>
       <div className="text-center py-24">
-        <p className="hrl-title text-2xl text-muted-foreground">TRACK NOT FOUND</p>
+        <p className="hrl-title text-2xl text-muted-foreground">Track not found</p>
         <Button variant="ghost" className="mt-4" onClick={() => navigate("/library")}>← Back to Library</Button>
       </div>
     </Layout>
@@ -207,7 +207,7 @@ export default function TrackDetail() {
           {/* Metadata */}
           <div className="md:col-span-2 space-y-4">
             <div className="hrl-card p-5">
-              <h2 className="hrl-title text-xl mb-4">METADATA</h2>
+              <h2 className="hrl-title text-xl mb-4">Metadata</h2>
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { label: "BPM", key: "bpm", type: "number" },
@@ -261,7 +261,7 @@ export default function TrackDetail() {
 
             {/* Genres */}
             <div className="hrl-card p-5">
-              <h2 className="hrl-title text-xl mb-4">GENRES</h2>
+              <h2 className="hrl-title text-xl mb-4">Genres</h2>
               <div className="flex flex-wrap gap-2">
                 {GENRE_OPTIONS.map(g => {
                   const active = track.track_genres?.some((x: any) => x.genre === g);
@@ -280,7 +280,7 @@ export default function TrackDetail() {
 
             {/* Moods */}
             <div className="hrl-card p-5">
-              <h2 className="hrl-title text-xl mb-4">MOODS</h2>
+              <h2 className="hrl-title text-xl mb-4">Moods</h2>
               <div className="flex flex-wrap gap-2">
                 {MOOD_OPTIONS.map(m => {
                   const active = track.track_moods?.includes(m);
@@ -302,7 +302,7 @@ export default function TrackDetail() {
           <div className="space-y-4">
             {/* Linked lyrics */}
             <div className="hrl-card p-4">
-              <h2 className="hrl-title text-lg mb-3">LYRICS</h2>
+              <h2 className="hrl-title text-lg mb-3">Lyrics</h2>
               {track.lyrics?.length > 0 ? (
                 <div className="space-y-1.5">
                   {track.lyrics.map((l: any) => (
@@ -325,7 +325,7 @@ export default function TrackDetail() {
 
             {/* Versions */}
             <div className="hrl-card p-4">
-              <h2 className="hrl-title text-lg mb-3">VERSIONS</h2>
+              <h2 className="hrl-title text-lg mb-3">Versions</h2>
               {track.track_versions?.length > 0 ? (
                 <div className="space-y-1.5">
                   {track.track_versions.map((v: any) => (
@@ -343,7 +343,7 @@ export default function TrackDetail() {
             {/* Rights */}
             {track.track_rights?.length > 0 && (
               <div className="hrl-card p-4">
-                <h2 className="hrl-title text-lg mb-3">RIGHTS</h2>
+                <h2 className="hrl-title text-lg mb-3">Rights</h2>
                 <div className="space-y-2">
                   {track.track_rights.map((r: any) => (
                     <div key={r.id} className="text-xs">

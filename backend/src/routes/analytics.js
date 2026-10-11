@@ -92,7 +92,7 @@ router.get("/overview", async (req, res) => {
        JOIN shareable_links sl ON sl.id=te.shareable_link_id
        JOIN playlists p ON p.id=sl.playlist_id
        WHERE p.user_id=$1 AND te.event_type='track_played'
-       GROUP BY t.id ORDER BY play_count DESC LIMIT 10`,
+       GROUP BY t.id, t.title, t.artist ORDER BY play_count DESC LIMIT 10`,
       [req.userId]
     ),
 
@@ -171,7 +171,7 @@ router.get("/playlist/:id", async (req, res) => {
        JOIN tracks t ON t.id=te.track_id
        JOIN shareable_links sl ON sl.id=te.shareable_link_id
        WHERE sl.playlist_id=$1 AND te.event_type='track_played'
-       GROUP BY t.id ORDER BY play_count DESC`,
+       GROUP BY t.id, t.title, t.artist ORDER BY play_count DESC`,
       [req.params.id]
     ),
     queryAll(

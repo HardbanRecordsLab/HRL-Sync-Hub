@@ -41,12 +41,7 @@ export function AudioPlayerBar({ player }: Props) {
     setHoverTime(ratio * duration);
   };
 
-  if (!track) return (
-    <div className="fixed bottom-0 right-0 left-0 z-30 player-bar h-[60px] flex items-center justify-center gap-3">
-      <Music2 className="w-4 h-4 text-muted-foreground opacity-40" />
-      <span className="hrl-label text-muted-foreground opacity-40">No track selected</span>
-    </div>
-  );
+  if (!track) return null;
 
   return (
     <div className={cn(
@@ -84,23 +79,23 @@ export function AudioPlayerBar({ player }: Props) {
       </div>
 
       {/* ── Main bar ───────────────────────────────── */}
-      <div className="flex items-center h-[72px] px-6 gap-5">
+      <div className="flex items-center h-[72px] px-4 md:px-6 gap-3 md:gap-5">
         {/* Track info */}
-        <div className="flex items-center gap-3 min-w-0 w-[240px] shrink-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none md:w-[280px]">
           <div className="w-9 h-9 shrink-0 rounded border border-border bg-card flex items-center justify-center">
             <Music2 className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium truncate leading-tight">{track.title}</p>
-            <p className="hrl-label text-[10px] text-muted-foreground truncate">{track.artist}</p>
+            <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
           </div>
           {track.bpm && (
-            <span className="hrl-badge-dim shrink-0">{track.bpm} BPM</span>
+            <span className="hrl-badge-dim shrink-0 hidden lg:inline-flex">{track.bpm} BPM</span>
           )}
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-2 mx-auto">
+        <div className="flex items-center gap-1 md:gap-2 md:mx-auto">
           <button onClick={prev} className="text-muted-foreground hover:text-foreground transition p-1.5 rounded hover:bg-white/5">
             <SkipBack className="w-4 h-4" />
           </button>
@@ -121,12 +116,12 @@ export function AudioPlayerBar({ player }: Props) {
         </div>
 
         {/* Time */}
-        <div className="mono text-xs text-muted-foreground tabular-nums w-24 text-center">
+        <div className="mono text-xs text-muted-foreground tabular-nums w-24 text-center hidden md:block">
           {fmt(currentTime)} / {fmt(duration)}
         </div>
 
         {/* Volume */}
-        <div className="flex items-center gap-2 w-[140px]">
+        <div className="hidden md:flex items-center gap-2 w-[140px]">
           <button onClick={toggleMute} className="text-muted-foreground hover:text-foreground transition shrink-0">
             {isMuted || volume === 0
               ? <VolumeX className="w-4 h-4" />
@@ -143,7 +138,7 @@ export function AudioPlayerBar({ player }: Props) {
         {/* Expand toggle */}
         <button
           onClick={() => setExpanded(e => !e)}
-          className="text-muted-foreground hover:text-foreground transition ml-2 p-1 rounded hover:bg-white/5"
+          className="hidden md:block text-muted-foreground hover:text-foreground transition ml-2 p-1 rounded hover:bg-white/5"
         >
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
@@ -165,12 +160,12 @@ export function AudioPlayerBar({ player }: Props) {
       {expanded && (
         <div className="px-6 pb-4 flex items-center gap-6 text-sm">
           {track.key && (
-            <span className="hrl-label">KEY <span className="text-foreground ml-1">{track.key}</span></span>
+            <span className="hrl-label">Key <span className="text-foreground ml-1">{track.key}</span></span>
           )}
           {track.bpm && (
             <span className="hrl-label">BPM <span className="text-foreground ml-1">{track.bpm}</span></span>
           )}
-          <span className="hrl-label">DURATION <span className="text-foreground ml-1">{fmt(duration)}</span></span>
+          <span className="hrl-label">Duration <span className="text-foreground ml-1">{fmt(duration)}</span></span>
           <a
             href={track.fileUrl}
             target="_blank" rel="noreferrer"

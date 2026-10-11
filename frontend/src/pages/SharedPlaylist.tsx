@@ -62,7 +62,7 @@ export default function SharedPlaylist() {
   if (isError || !data) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
-        <p className="hrl-title text-4xl text-muted-foreground mb-2">LINK INVALID</p>
+        <p className="hrl-title text-4xl text-muted-foreground mb-2">This link is no longer valid</p>
         <p className="hrl-label text-muted-foreground">This playlist link has expired or doesn't exist.</p>
       </div>
     </div>
@@ -77,7 +77,7 @@ export default function SharedPlaylist() {
       <header className="border-b border-border px-6 py-5">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
-            <p className="hrl-label mb-1" style={{ color: "var(--hrl-red)", letterSpacing: "0.15em" }}>HARDBAN RECORDS LAB</p>
+            <p className="hrl-label mb-1" style={{ color: "var(--hrl-red)", letterSpacing: "0.15em" }}>Hardban Records Lab</p>
             <h1 className="hrl-title text-4xl">{playlist.name}</h1>
             {playlist.description && <p className="text-sm text-muted-foreground mt-1">{playlist.description}</p>}
           </div>
@@ -183,7 +183,7 @@ export default function SharedPlaylist() {
       {/* Footer */}
       <div className="text-center py-4 border-t border-border/50 space-y-1">
         <p className="hrl-label text-muted-foreground">
-          Powered by <a href="https://hardbanrecordslab.online" target="_blank" rel="noreferrer" className="text-violet-500/70 hover:text-violet-400 transition">HRL SYNC</a>
+          Powered by <a href="https://hardbanrecordslab.online" target="_blank" rel="noreferrer" className="text-violet-500/70 hover:text-violet-400 transition">HRL Sync</a>
         </p>
         <p className="hrl-label text-muted-foreground/60 text-xs">
           <a href="/terms" className="hover:text-foreground transition">Regulamin</a>

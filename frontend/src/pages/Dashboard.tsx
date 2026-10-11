@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Music2, Radio, Eye, TrendingUp, Clock, HardDrive } from "lucide-react";
 import Layout from "@/components/Layout";
@@ -22,10 +23,10 @@ export default function Dashboard() {
   });
 
   const STATS = [
-    { label: "Total Tracks",   value: stats?.totalTracks   ?? 0, icon: Music2,     suffix: "" },
-    { label: "Sync Ready",     value: stats?.syncReady     ?? 0, icon: TrendingUp,  suffix: "" },
-    { label: "Active Pitches", value: stats?.totalPlaylists ?? 0, icon: Radio,      suffix: "" },
-    { label: "Total Plays",    value: stats?.totalPlays    ?? 0, icon: Eye,         suffix: "" },
+    { label: "Tracks",         value: stats?.totalTracks   ?? 0, icon: Music2,     suffix: "" },
+    { label: "Sync ready",     value: stats?.syncReady     ?? 0, icon: TrendingUp,  suffix: "" },
+    { label: "Active pitches", value: stats?.totalPlaylists ?? 0, icon: Radio,      suffix: "" },
+    { label: "Plays",          value: stats?.totalPlays    ?? 0, icon: Eye,         suffix: "" },
     { label: "Lyrics",         value: stats?.totalLyrics   ?? 0, icon: HardDrive,  suffix: "" },
   ];
 
@@ -34,8 +35,8 @@ export default function Dashboard() {
       <div className="animate-fade-in space-y-8">
         {/* Header */}
         <div>
-          <h1 className="hrl-title text-5xl text-foreground mb-1">DASHBOARD</h1>
-          <p className="hrl-label text-muted-foreground">Hardban Records Lab — Sync Management</p>
+          <h1 className="hrl-title">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Overview of the sync catalog and pitching activity</p>
         </div>
 
         {/* Stats */}
@@ -55,7 +56,7 @@ export default function Dashboard() {
         <div className="hrl-card p-5 animate-fade-in stagger-3">
           <div className="flex items-center gap-2 mb-5">
             <Clock className="w-3.5 h-3.5 text-violet-500" />
-            <h2 className="hrl-title text-xl">RECENT TRACKS</h2>
+            <h2 className="text-base font-semibold">Recently added</h2>
           </div>
           {stats?.recentTracks.length === 0 && (
             <p className="hrl-label text-muted-foreground py-6 text-center">No tracks yet — upload audio in the Library</p>
@@ -63,7 +64,7 @@ export default function Dashboard() {
           <div className="space-y-2">
             {stats?.recentTracks.map((t, i) => (
               <div key={t.id} className={`track-row animate-fade-in stagger-${i + 1}`}>
-                <span className="hrl-label w-6 text-center">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-xs text-muted-foreground tabular-nums w-6 text-center">{i + 1}</span>
                 <div>
                   <p className="text-sm font-medium leading-tight">{t.title}</p>
                   <p className="hrl-label text-muted-foreground">{t.artist}</p>
@@ -79,15 +80,15 @@ export default function Dashboard() {
         {/* Quick links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in stagger-4">
           {[
-            { href: "/library", label: "Upload Audio",   desc: "Add to the library" },
-            { href: "/pitches", label: "Send Pitch",      desc: "Create a playlist" },
-            { href: "/lyrics",  label: "Lyrics Catalog",  desc: "Manage lyrics" },
+            { href: "/library", label: "Upload audio",   desc: "Add tracks to the library" },
+            { href: "/pitches", label: "Send a pitch",    desc: "Share a playlist with a client" },
+            { href: "/lyrics",  label: "Lyrics",          desc: "Manage lyrics and translations" },
             { href: "/contacts", label: "Contacts",       desc: "Supervisors & clients" },
           ].map(({ href, label, desc }) => (
-            <a key={href} href={href} className="hrl-card p-4 block hover:border-violet-500/30 transition group">
+            <Link key={href} to={href} className="hrl-card p-4 block hover:border-violet-500/40 transition group">
               <p className="font-medium text-sm group-hover:text-violet-400 transition mb-1">{label}</p>
               <p className="hrl-label text-muted-foreground">{desc}</p>
-            </a>
+            </Link>
           ))}
         </div>
       </div>

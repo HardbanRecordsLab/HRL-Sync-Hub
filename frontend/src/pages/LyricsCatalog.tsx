@@ -173,7 +173,7 @@ export default function LyricsCatalog() {
       <div className="animate-fade-in space-y-6">
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="hrl-title text-5xl mb-1">LYRICS</h1>
+            <h1 className="hrl-title text-5xl mb-1">Lyrics</h1>
             <p className="hrl-label text-muted-foreground">
               {lyrics.length} entr{lyrics.length !== 1 ? "ies" : "y"}
             </p>
@@ -184,7 +184,7 @@ export default function LyricsCatalog() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="hrl-title text-2xl">{editing ? "EDIT LYRICS" : "NEW LYRICS"}</DialogTitle>
+                <DialogTitle className="hrl-title text-2xl">{editing ? "Edit lyrics" : "New lyrics"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -286,7 +286,7 @@ export default function LyricsCatalog() {
         ) : lyrics.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-            <p className="hrl-title text-2xl text-muted-foreground mb-2">NO LYRICS</p>
+            <p className="hrl-title text-2xl text-muted-foreground mb-2">No lyrics yet</p>
             <p className="hrl-label text-muted-foreground">Paste lyrics in — one entry per song</p>
           </div>
         ) : (

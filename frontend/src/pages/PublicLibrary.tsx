@@ -1,124 +1,127 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Music2, Play, Pause, Loader2 } from "lucide-react";
+import { Music2, Play, Loader2, Search } from "lucide-react";
 import { usePlayer } from "@/components/player/PlayerProvider";
+import { AudioPlayerBar } from "@/components/player/AudioPlayerBar";
+import { Input } from "@/components/ui/input";
 import { api, streamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+type PublicTrack = { id: number; title: string; artist: string; duration: number | null; bpm: number | null; key: string | null };
+
 function fmt(s: number | null) {
-    if (!s) return "—";
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  if (!s) return "—";
+  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 }
 
+/** Public catalog: every track marked public, playable without an account. */
 export default function PublicLibrary() {
-    const player = usePlayer();
+  const player = usePlayer();
+  const [q, setQ] = useState("");
 
-    const { data: tracks, isLoading } = useQuery({
-        queryKey: ["tracks", "public"],
-        queryFn: async () => {
-            const res = await api.get<{ tracks: any[] }>("/api/tracks/public");
-            return res.tracks || [];
-        },
-    });
+  const { data: tracks = [], isLoading } = useQuery({
+    queryKey: ["tracks", "public"],
+    queryFn: async () => (await api.get<{ tracks: PublicTrack[] }>("/api/tracks/public")).tracks || [],
+  });
 
-    const handlePlay = (track: any) => {
-        const allTracks = tracks?.map((t: any) => ({
-            id: t.id,
-            title: t.title,
-            artist: t.artist,
-            fileUrl: streamUrl(t.id),
-            duration: t.duration,
-        })) || [];
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return needle ? tracks.filter((t) => `${t.title} ${t.artist}`.toLowerCase().includes(needle)) : tracks;
+  }, [tracks, q]);
 
-        player.play({
-            id: track.id,
-            title: track.title,
-            artist: track.artist,
-            fileUrl: streamUrl(track.id),
-            duration: track.duration,
-        }, allTracks);
-    };
+  const toItem = (t: PublicTrack) => ({ id: String(t.id), title: t.title, artist: t.artist, fileUrl: streamUrl(String(t.id)), duration: t.duration ?? undefined, bpm: t.bpm ?? undefined, key: t.key ?? undefined });
+  const handlePlay = (t: PublicTrack) => player.play(toItem(t), shown.map(toItem));
 
-    return (
-        <div className="min-h-screen bg-background p-6">
-            <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
-                {/* Header */}
-                <div className="text-center space-y-2">
-                    <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center overflow-hidden rounded-2xl bg-white/95 p-2">
-                        <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
-                    </div>
-                    <h1 className="hrl-title text-4xl tracking-widest text-foreground">PUBLIC LIBRARY</h1>
-                    <p className="hrl-label text-muted-foreground uppercase tracking-widest text-xs">
-                        Open Catalog — Hardban Records Lab
-                    </p>
-                </div>
-
-                {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-                        <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-                        <span className="hrl-label tracking-widest opacity-50">SYNCING CATALOG…</span>
-                    </div>
-                ) : !tracks || tracks.length === 0 ? (
-                    <div className="text-center py-20 border border-dashed border-border rounded-lg">
-                        <Music2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                        <p className="hrl-title text-xl text-muted-foreground">NO PUBLIC TRACKS AVAILABLE</p>
-                    </div>
-                ) : (
-                    <div className="hrl-card overflow-hidden">
-                        <div className="grid px-4 py-3 border-b border-border bg-white/2" style={{ gridTemplateColumns: "40px 1fr 100px 80px" }}>
-                            {["#", "TITLE", "BPM", "LENGTH"].map(h => (
-                                <span key={h} className="hrl-label text-[10px] text-muted-foreground tracking-widest">{h}</span>
-                            ))}
-                        </div>
-
-                        <div className="divide-y divide-border/50">
-                            {tracks.map((track: any, i: number) => {
-                                const isActive = player.track?.id === track.id;
-                                return (
-                                    <div
-                                        key={track.id}
-                                        className={cn(
-                                            "grid items-center px-4 py-4 cursor-pointer group transition-all hover:bg-violet-500/5",
-                                            isActive && "bg-violet-500/10"
-                                        )}
-                                        style={{ gridTemplateColumns: "40px 1fr 100px 80px" }}
-                                        onClick={() => handlePlay(track)}
-                                    >
-                                        <div className="flex items-center justify-center">
-                                            {isActive && player.isPlaying ? (
-                                                <div className="flex gap-0.5 items-end h-3">
-                                                    {[1, 2, 3].map(b => (
-                                                        <div key={b} className="w-0.5 bg-violet-500 animate-pulse-red" style={{ height: `${6 + b * 2}px`, animationDelay: `${b * 0.1}s` }} />
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <Play className={cn("w-3.5 h-3.5 text-muted-foreground group-hover:text-violet-400 transition-colors", isActive && "text-violet-400")} />
-                                            )}
-                                        </div>
-
-                                        <div className="min-w-0 pr-4">
-                                            <p className={cn("text-sm font-medium truncate tracking-wide", isActive && "text-violet-400")}>
-                                                {track.title}
-                                            </p>
-                                            <p className="hrl-label text-[10px] text-muted-foreground/70 truncate uppercase">
-                                                {track.artist}
-                                            </p>
-                                        </div>
-
-                                        <span className="mono text-xs text-muted-foreground">{track.bpm || "—"}</span>
-                                        <span className="mono text-xs text-muted-foreground">{fmt(track.duration)}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                <div className="text-center pt-8">
-                    <p className="hrl-label text-[9px] text-muted-foreground opacity-30 tracking-[0.3em] uppercase">
-                        Powered by HRL SYNC HUB v2.0 Premium
-                    </p>
-                </div>
-            </div>
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 h-16 flex items-center gap-3">
+          <img src="/favicon.png" alt="" className="w-8 h-8 object-contain rounded-md bg-white p-0.5" />
+          <div>
+            <p className="text-sm font-semibold leading-tight">HRL Sync Hub</p>
+            <p className="text-xs text-muted-foreground leading-tight">Hardban Records Lab</p>
+          </div>
+          <a href="https://hardbanrecordslab.online/sync-hub/" className="ml-auto text-sm text-muted-foreground hover:text-foreground">Licensing enquiries</a>
         </div>
-    );
+      </header>
+
+      <main className={cn("max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12 space-y-6", player.track ? "pb-32" : "pb-16")}>
+        <div className="space-y-2">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Music catalog</h1>
+          <p className="text-muted-foreground max-w-2xl">
+            Original music from Hardban Records Lab, available for sync licensing in film, advertising, games and online content.
+            Press play on any track — no account needed.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Search by title or artist…" className="pl-9 h-10" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search the catalog" />
+          </div>
+          {!isLoading && <span className="text-sm text-muted-foreground">{q ? `${shown.length} of ${tracks.length}` : `${tracks.length}`} tracks</span>}
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20 gap-2 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin" /> <span className="text-sm">Loading catalog…</span>
+          </div>
+        ) : shown.length === 0 ? (
+          <div className="hrl-card text-center py-16">
+            <Music2 className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+            <p className="text-muted-foreground">{tracks.length ? "No tracks match your search." : "No tracks available yet."}</p>
+          </div>
+        ) : (
+          <div className="hrl-card overflow-hidden">
+            <div className="hidden md:grid gap-4 px-4 py-2.5 border-b border-border text-xs font-medium text-muted-foreground pub-grid">
+              <span className="text-center">#</span><span>Track</span><span>BPM</span><span>Key</span><span className="text-right">Length</span>
+            </div>
+            {shown.map((t, i) => {
+              const active = player.track?.id === String(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => (active ? player.toggle() : handlePlay(t))}
+                  className={cn("w-full text-left grid items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 border-b border-border/60 last:border-0 group hover:bg-white/[0.03] transition-colors pub-grid",
+                    active && "bg-violet-500/10")}
+                >
+                  <span className="w-8 h-8 flex items-center justify-center">
+                    {active && player.isPlaying ? (
+                      <span className="flex gap-0.5 items-end h-3.5">
+                        {[1, 2, 3].map((b) => <span key={b} className="w-0.5 bg-violet-400 rounded-full animate-pulse-red" style={{ height: `${6 + b * 3}px`, animationDelay: `${b * 0.15}s` }} />)}
+                      </span>
+                    ) : (
+                      <>
+                        <span className={cn("text-xs text-muted-foreground tabular-nums group-hover:hidden", active && "hidden")}>{i + 1}</span>
+                        <Play className={cn("w-4 h-4 text-violet-300 hidden group-hover:block", active && "block")} />
+                      </>
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className={cn("block text-sm font-medium truncate", active && "text-violet-300")}>{t.title}</span>
+                    <span className="block text-xs text-muted-foreground truncate">
+                      {t.artist}
+                      <span className="md:hidden">{[t.bpm && `${t.bpm} BPM`, t.key, fmt(t.duration)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+                    </span>
+                  </span>
+                  <span className="hidden md:block text-sm text-muted-foreground tabular-nums">{t.bpm ?? "—"}</span>
+                  <span className="hidden md:block text-sm text-muted-foreground">{t.key ?? "—"}</span>
+                  <span className="hidden md:block text-sm text-muted-foreground tabular-nums text-right">{fmt(t.duration)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <footer className="pt-6 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+          <span>© Hardban Records Lab</span>
+          <a href="/terms" className="hover:text-foreground">Terms</a>
+          <a href="/privacy" className="hover:text-foreground">Privacy</a>
+          <a href="https://hardbanrecordslab.online/contact/" className="hover:text-foreground">Contact</a>
+        </footer>
+      </main>
+
+      <AudioPlayerBar player={player} />
+    </div>
+  );
 }

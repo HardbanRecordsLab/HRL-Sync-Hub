@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -56,69 +56,61 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
     background-color: rgb(9, 9, 16);
-    /* Subtle grid texture + faint brand glow top-left */
-    background-image:
-      radial-gradient(60rem 40rem at 0% -10%, rgba(139,92,246,0.10), transparent 60%),
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 100% 100%, 32px 32px, 32px 32px;
-    background-attachment: fixed, scroll, scroll;
+    background-image: radial-gradient(70rem 40rem at 10% -20%, rgba(139,92,246,0.08), transparent 60%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    letter-spacing: 0.04em;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
   code, .mono {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
   }
 }
 
 @layer components {
-  /* ── HRL Brand Components ── */
+  /* ── HRL Brand Components (2026-10: calm, sentence-case, one typeface) ── */
   .hrl-label {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.6875rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
     color: rgb(var(--muted-foreground));
   }
 
   .hrl-title {
-    font-family: 'Bebas Neue', sans-serif;
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    letter-spacing: -0.02em !important;
+    text-transform: none !important;
   }
+  h1.hrl-title { font-size: 1.75rem !important; line-height: 2.25rem; margin-bottom: .25rem; }
 
   .hrl-card {
-    @apply rounded-lg border bg-card;
+    @apply rounded-xl border bg-card;
     border-color: rgb(var(--border));
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .hrl-card:hover {
-    border-color: rgba(139, 92, 246, 0.35);
+    transition: border-color 0.2s;
   }
 
   .hrl-btn-primary {
-    background: var(--hrl-gradient);
+    background: rgb(var(--primary));
     color: white;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
     border: none;
-    transition: all 0.15s;
+    border-radius: 0.5rem;
+    transition: background 0.15s;
   }
+  .hrl-btn-primary:hover { background: rgb(124 58 237); }
 
-  .hrl-btn-primary:hover {
-    filter: brightness(1.12);
-    box-shadow: var(--hrl-glow-sm);
-  }
-
-  /* gradient text — headings / brand accents */
   .hrl-gradient-text {
     background: var(--hrl-gradient);
     -webkit-background-clip: text;
@@ -127,42 +119,37 @@
   }
 
   .hrl-stat-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    letter-spacing: 0.04em;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
     color: rgb(var(--foreground));
-    line-height: 1;
+    line-height: 1.1;
   }
 
-  .hrl-badge-red {
-    background: var(--hrl-brand-dim);
-    color: #a78bfa;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.625rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 2px;
-    border: 1px solid rgba(139, 92, 246, 0.25);
+  /* badges: pills, sentence case */
+  .hrl-badge-red, .hrl-badge-dim, .hrl-badge-ok, .hrl-badge-warn {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    padding: 1px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
   }
-
-  .hrl-badge-dim {
-    background: rgba(255,255,255,0.04);
-    color: rgb(var(--muted-foreground));
-    font-family: 'Space Mono', monospace;
-    font-size: 0.625rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 2px 7px;
-    border-radius: 2px;
-    border: 1px solid rgba(255,255,255,0.07);
-  }
+  .hrl-badge-red { background: var(--hrl-brand-dim); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+  .hrl-badge-dim { background: rgba(255,255,255,0.04); color: rgb(var(--muted-foreground)); border: 1px solid rgba(255,255,255,0.08); }
+  .hrl-badge-ok { background: rgba(16,185,129,0.12); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .hrl-badge-warn { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
 
   .hrl-nav-link {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
     transition: all 0.15s;
   }
 
@@ -227,4 +214,14 @@
   .stagger-3 { animation-delay: 0.15s; }
   .stagger-4 { animation-delay: 0.20s; }
   .stagger-5 { animation-delay: 0.25s; }
+}
+
+/* Library list columns: compact on phones, full table from md up */
+.lib-grid { grid-template-columns: 32px minmax(0, 1fr) 36px; }
+@media (min-width: 768px) {
+  .lib-grid { grid-template-columns: 32px minmax(0, 1fr) 120px 56px 56px 64px 36px; }
+}
+.pub-grid { grid-template-columns: 32px minmax(0, 1fr); }
+@media (min-width: 768px) {
+  .pub-grid { grid-template-columns: 32px minmax(0, 1fr) 56px 56px 64px; }
 }
