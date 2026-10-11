@@ -285,3 +285,61 @@ BEGIN
     EXECUTE format('CREATE TRIGGER trg_%s_updated BEFORE UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION update_updated_at()', t, t);
   END LOOP;
 END $$;
+
+-- ─── Sync licence shop (2026-10-11) ─────────────────────────────────────────
+-- Tiers are editable from the admin panel; prices in grosze (PLN). Terms:
+-- https://hardbanrecordslab.online/sync-license-terms/
+CREATE TABLE IF NOT EXISTS license_tiers (
+  code          TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  summary       TEXT NOT NULL DEFAULT '',
+  price_grosze  INTEGER,
+  quote_only    BOOLEAN NOT NULL DEFAULT false,
+  sort          INTEGER NOT NULL DEFAULT 0,
+  active        BOOLEAN NOT NULL DEFAULT true
+);
+INSERT INTO license_tiers (code, name, summary, price_grosze, quote_only, sort) VALUES
+  ('online', 'Online', 'YouTube, social media, podcasts, streams and websites — monetised channels included. No paid ads.', 7900, false, 1),
+  ('commercial', 'Commercial', 'Everything in Online plus online ads and paid promotion, corporate and product videos, events and in-store use.', 42900, false, 2),
+  ('extended', 'Extended', 'TV, radio, cinema, VOD, games and apps, national or international campaigns, exclusivity.', NULL, true, 3)
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS license_orders (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  number              TEXT UNIQUE,
+  track_id            INTEGER NOT NULL,
+  track_title         TEXT NOT NULL,
+  track_artist        TEXT NOT NULL,
+  tier_code           TEXT NOT NULL,
+  tier_name           TEXT NOT NULL,
+  price_grosze        INTEGER NOT NULL,
+  currency            TEXT NOT NULL DEFAULT 'PLN',
+  buyer_name          TEXT NOT NULL,
+  buyer_email         TEXT NOT NULL,
+  buyer_company       TEXT,
+  project_title       TEXT NOT NULL,
+  project_description TEXT,
+  terms_version       TEXT NOT NULL,
+  waiver_accepted     BOOLEAN NOT NULL DEFAULT false,
+  status              TEXT NOT NULL DEFAULT 'pending',
+  stripe_session_id   TEXT UNIQUE,
+  download_token      TEXT UNIQUE,
+  download_count      INTEGER NOT NULL DEFAULT 0,
+  ip_address          TEXT,
+  paid_at             TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_license_orders_status  ON license_orders(status);
+CREATE INDEX IF NOT EXISTS idx_license_orders_created ON license_orders(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS license_inquiries (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  track_id    INTEGER,
+  track_title TEXT,
+  name        TEXT NOT NULL,
+  email       TEXT NOT NULL,
+  company     TEXT,
+  project     TEXT NOT NULL,
+  message     TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

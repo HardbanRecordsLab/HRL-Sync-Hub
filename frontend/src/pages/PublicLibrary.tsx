@@ -4,6 +4,7 @@ import { Music2, Play, Loader2, Search } from "lucide-react";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { AudioPlayerBar } from "@/components/player/AudioPlayerBar";
 import { Input } from "@/components/ui/input";
+import { LicenseDialog } from "@/components/LicenseDialog";
 import { api, streamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ function fmt(s: number | null) {
 export default function PublicLibrary() {
   const player = usePlayer();
   const [q, setQ] = useState("");
+  const [licensing, setLicensing] = useState<PublicTrack | null>(null);
 
   const { data: tracks = [], isLoading } = useQuery({
     queryKey: ["tracks", "public"],
@@ -50,7 +52,7 @@ export default function PublicLibrary() {
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Music catalog</h1>
           <p className="text-muted-foreground max-w-2xl">
             Original music from Hardban Records Lab, available for sync licensing in film, advertising, games and online content.
-            Press play on any track — no account needed.
+            Press play on any track — no account needed — and license it online in a minute: from 79 zł for online videos, 429 zł for ads and commercial use.
           </p>
         </div>
 
@@ -74,15 +76,17 @@ export default function PublicLibrary() {
         ) : (
           <div className="hrl-card overflow-hidden">
             <div className="hidden md:grid gap-4 px-4 py-2.5 border-b border-border text-xs font-medium text-muted-foreground pub-grid">
-              <span className="text-center">#</span><span>Track</span><span>BPM</span><span>Key</span><span className="text-right">Length</span>
+              <span className="text-center">#</span><span>Track</span><span>BPM</span><span>Key</span><span className="text-right">Length</span><span />
             </div>
             {shown.map((t, i) => {
               const active = player.track?.id === String(t.id);
               return (
-                <button
+                <div
                   key={t.id}
+                  role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") (active ? player.toggle() : handlePlay(t)); }}
                   onClick={() => (active ? player.toggle() : handlePlay(t))}
-                  className={cn("w-full text-left grid items-center gap-3 md:gap-4 px-3 md:px-4 py-2.5 border-b border-border/60 last:border-0 group hover:bg-white/[0.03] transition-colors pub-grid",
+                  className={cn("w-full text-left grid items-center cursor-pointer gap-3 md:gap-4 px-3 md:px-4 py-2.5 border-b border-border/60 last:border-0 group hover:bg-white/[0.03] transition-colors pub-grid",
                     active && "bg-violet-500/10")}
                 >
                   <span className="w-8 h-8 flex items-center justify-center">
@@ -107,7 +111,13 @@ export default function PublicLibrary() {
                   <span className="hidden md:block text-sm text-muted-foreground tabular-nums">{t.bpm ?? "—"}</span>
                   <span className="hidden md:block text-sm text-muted-foreground">{t.key ?? "—"}</span>
                   <span className="hidden md:block text-sm text-muted-foreground tabular-nums text-right">{fmt(t.duration)}</span>
-                </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLicensing(t); }}
+                    className="justify-self-end text-xs font-medium px-3 py-1.5 rounded-full border border-violet-500/40 text-violet-200 hover:bg-violet-500/15"
+                  >
+                    License
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -121,6 +131,7 @@ export default function PublicLibrary() {
         </footer>
       </main>
 
+      <LicenseDialog track={licensing} onClose={() => setLicensing(null)} />
       <AudioPlayerBar player={player} />
     </div>
   );

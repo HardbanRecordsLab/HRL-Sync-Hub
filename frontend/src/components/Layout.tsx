@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Library, FileText, Radio, Users,
   Kanban, BarChart3, Settings, LogOut,
-  ChevronLeft, ChevronRight, Briefcase, Menu, X,
+  ChevronLeft, ChevronRight, Briefcase, Menu, X, ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 import GlobalSearch from "./GlobalSearch";
@@ -22,6 +22,7 @@ const NAV = [
   { to: "/contacts", icon: Users, label: "Contacts" },
   { to: "/projects", icon: Kanban, label: "Projects" },
   { to: "/business", icon: Briefcase, label: "Business" },
+  { to: "/sales", icon: ShoppingBag, label: "Sales" },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];

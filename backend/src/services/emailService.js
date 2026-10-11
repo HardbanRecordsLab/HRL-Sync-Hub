@@ -24,7 +24,7 @@ class EmailService {
     logger.info("✅ Email transport configured");
   }
 
-  async send({ to, subject, html, text }) {
+  async send({ to, subject, html, text, attachments, replyTo }) {
     if (!this.transporter) {
       logger.info(`Email skipped (no SMTP): to=${to} subject="${subject}"`);
       return { skipped: true };
@@ -32,7 +32,7 @@ class EmailService {
     try {
       const info = await this.transporter.sendMail({
         from: process.env.EMAIL_FROM || "HRL Sync <sync@hardbanrecordslab.online>",
-        to, subject, html, text,
+        to, subject, html, text, attachments, replyTo,
       });
       logger.info(`Email sent: ${info.messageId} to ${to}`);
       return info;

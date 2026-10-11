@@ -25,6 +25,9 @@ const PublicLibrary = lazy(() => import("./pages/PublicLibrary"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Licenses = lazy(() => import("./pages/Licenses"));
+const LicenseSuccess = lazy(() => import("./pages/LicensePages").then((m) => ({ default: m.LicenseSuccess })));
+const LicenseVerify = lazy(() => import("./pages/LicensePages").then((m) => ({ default: m.LicenseVerify })));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -57,6 +60,8 @@ function AppRoutes() {
         {/* Public */}
         <Route path="/share/:token" element={<SharedPlaylist />} />
         <Route path="/public-library" element={<PublicLibrary />} />
+        <Route path="/license/success" element={<LicenseSuccess />} />
+        <Route path="/license/verify/:number" element={<LicenseVerify />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
 
@@ -70,6 +75,7 @@ function AppRoutes() {
         <Route path="/projects" element={<Protected><Projects /></Protected>} />
         <Route path="/business" element={<Protected><BusinessHub /></Protected>} />
         <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
+        <Route path="/sales" element={<Protected><Licenses /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
 
         <Route path="*" element={<NotFound />} />

@@ -325,6 +325,140 @@ async function check(name, fn) {
     assert.strictEqual(r.status, 401);
   });
 
+
+  // ── Sync licence shop ─────────────────────────────────────────────────────
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
+  let licTrackId, paidOrder;
+
+  await check("GET /api/licenses/tiers → Online 79 zł, Commercial 429 zł, Extended on quote", async () => {
+    const r = await request(app).get("/api/licenses/tiers");
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    const byCode = Object.fromEntries(r.body.tiers.map((t) => [t.code, t]));
+    assert.strictEqual(byCode.online.price, 79);
+    assert.strictEqual(byCode.commercial.price, 429);
+    assert.strictEqual(byCode.extended.quote_only, true);
+  });
+
+  await check("checkout refuses a track that is not cleared → 409", async () => {
+    const up = await request(app).post("/api/tracks/upload").set("Authorization", `Bearer ${adminToken}`)
+      .field("title", "Licence Me").field("artist", "CMLP")
+      .attach("file", fakeAudio, { filename: "licence me.wav", contentType: "audio/wav" });
+    assert.strictEqual(up.status, 201, JSON.stringify(up.body));
+    licTrackId = up.body.id;
+    await pool.query("UPDATE tracks SET is_public = true WHERE id = $1", [licTrackId]);
+    const r = await request(app).post("/api/licenses/checkout").send({
+      track_id: licTrackId, tier: "online", buyer_name: "Ann", buyer_email: "ann@example.com",
+      project_title: "Vlog", accept_terms: true, accept_waiver: true });
+    assert.strictEqual(r.status, 409, JSON.stringify(r.body));
+  });
+
+  await check("checkout requires both consents → 400", async () => {
+    await pool.query("UPDATE tracks SET clearance_status = 'cleared_ready' WHERE id = $1", [licTrackId]);
+    const r = await request(app).post("/api/licenses/checkout").send({
+      track_id: licTrackId, tier: "online", buyer_name: "Ann", buyer_email: "ann@example.com", project_title: "Vlog", accept_terms: true });
+    assert.strictEqual(r.status, 400);
+  });
+
+  await check("checkout without Stripe configured → 503 (no silent free licence)", async () => {
+    const r = await request(app).post("/api/licenses/checkout").send({
+      track_id: licTrackId, tier: "online", buyer_name: "Ann", buyer_email: "ann@example.com",
+      project_title: "Vlog", accept_terms: true, accept_waiver: true });
+    assert.strictEqual(r.status, 503, JSON.stringify(r.body));
+  });
+
+  async function pendingOrder() {
+    const { rows: [o] } = await pool.query(
+      `INSERT INTO license_orders (track_id, track_title, track_artist, tier_code, tier_name, price_grosze, buyer_name, buyer_email,
+         project_title, terms_version, waiver_accepted, stripe_session_id)
+       VALUES ($1,'Licence Me','CMLP','commercial','Commercial',42900,'Ann','ann@example.com','Spot','2026-10-11',true,$2) RETURNING *`,
+      [licTrackId, "cs_test_" + crypto.randomBytes(4).toString("hex")]);
+    return o;
+  }
+  function signed(payload, secret = "whsec_e2e_secret") {
+    const body = JSON.stringify(payload);
+    const t = Math.floor(Date.now() / 1000);
+    const sig = crypto.createHmac("sha256", secret).update(`${t}.${body}`).digest("hex");
+    return { body, header: `t=${t},v1=${sig}` };
+  }
+  const paidEvent = (id) => ({ type: "checkout.session.completed", data: { object: { payment_status: "paid", metadata: { app: "hrl-sync", order_id: id } } } });
+
+  await check("webhook with a forged signature → 400, order stays unpaid", async () => {
+    const o = await pendingOrder();
+    const { body, header } = signed(paidEvent(o.id), "whsec_wrong");
+    const r = await request(app).post("/api/licenses/stripe/webhook").set("Content-Type", "application/json").set("Stripe-Signature", header).send(body);
+    assert.strictEqual(r.status, 400);
+    const { rows } = await pool.query("SELECT status FROM license_orders WHERE id = $1", [o.id]);
+    assert.strictEqual(rows[0].status, "pending");
+  });
+
+  await check("signed webhook fulfils: number, token; replay is idempotent", async () => {
+    const o = await pendingOrder();
+    let first;
+    for (let i = 0; i < 2; i++) {
+      const { body, header } = signed(paidEvent(o.id));
+      const r = await request(app).post("/api/licenses/stripe/webhook").set("Content-Type", "application/json").set("Stripe-Signature", header).send(body);
+      assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+      const { rows } = await pool.query("SELECT * FROM license_orders WHERE id = $1", [o.id]);
+      if (i === 0) first = rows[0]; else assert.strictEqual(rows[0].number, first.number, "number unchanged on replay");
+    }
+    paidOrder = first;
+    assert.strictEqual(paidOrder.status, "paid");
+    assert(/^HRL-SYNC-\d{4}-[2-9A-Z]{6}$/.test(paidOrder.number), paidOrder.number);
+    assert(/^[a-f0-9]{48}$/.test(paidOrder.download_token));
+  });
+
+  await check("status by session id returns download + certificate links", async () => {
+    const r = await request(app).get(`/api/licenses/session/${paidOrder.stripe_session_id}`);
+    assert.strictEqual(r.status, 200);
+    assert(r.body.download_url.endsWith(paidOrder.download_token));
+    assert.strictEqual(r.body.number, paidOrder.number);
+  });
+
+  await check("paid licence downloads the full file; unknown token → 404", async () => {
+    const r = await request(app).get(`/api/licenses/download/${paidOrder.download_token}`);
+    assert.strictEqual(r.status, 200, `got ${r.status}`);
+    assert(/attachment/.test(r.headers["content-disposition"]), "attachment");
+    assert(r.headers["content-disposition"].includes(paidOrder.number), "number in filename");
+    const bad = await request(app).get(`/api/licenses/download/${"0".repeat(48)}`);
+    assert.strictEqual(bad.status, 404);
+  });
+
+  await check("certificate is a real PDF", async () => {
+    const r = await request(app).get(`/api/licenses/certificate/${paidOrder.download_token}`).buffer(true)
+      .parse((res, cb) => { const c = []; res.on("data", (d) => c.push(d)); res.on("end", () => cb(null, Buffer.concat(c))); });
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.headers["content-type"], "application/pdf");
+    assert.strictEqual(r.body.slice(0, 4).toString(), "%PDF");
+  });
+
+  await check("public verification by licence number", async () => {
+    const r = await request(app).get(`/api/licenses/verify/${paidOrder.number.toLowerCase()}`);
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.valid, true);
+    assert.strictEqual(r.body.buyer_email, undefined, "no e-mail leaked");
+    const no = await request(app).get("/api/licenses/verify/HRL-SYNC-2026-NOPE22");
+    assert.strictEqual(no.status, 404);
+  });
+
+  await check("quote request for Extended → 201", async () => {
+    const r = await request(app).post("/api/licenses/inquiry").send({ track_id: licTrackId, name: "Bob", email: "bob@tv.example", project: "TV spot" });
+    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
+  });
+
+  await check("admin sees sales; non-admin cannot change prices", async () => {
+    const r = await request(app).get("/api/licenses/admin/orders").set("Authorization", `Bearer ${adminToken}`);
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    assert.strictEqual(r.body.totals.sold, 1);
+    assert.strictEqual(r.body.totals.revenue, 42900);
+    assert.strictEqual(r.body.inquiries.length, 1);
+    const anon = await request(app).get("/api/licenses/admin/orders");
+    assert.strictEqual(anon.status, 401);
+    const u = await request(app).patch("/api/licenses/admin/tiers/online").set("Authorization", `Bearer ${userToken}`).send({ price: 1 });
+    assert.strictEqual(u.status, 403);
+    const a = await request(app).patch("/api/licenses/admin/tiers/online").set("Authorization", `Bearer ${adminToken}`).send({ price: 69 });
+    assert.strictEqual(a.body.price_grosze, 6900);
+  });
+
   console.log(`\n${failed === 0 ? "✅" : "❌"}  ${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);
 })();

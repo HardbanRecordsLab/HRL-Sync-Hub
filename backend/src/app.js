@@ -72,6 +72,10 @@ app.use("/api/auth/login", RateLimitManager.getAuthLimiter());
 app.use("/api/auth/register", RateLimitManager.getAuthLimiter());
 app.use("/api/tracks/upload", RateLimitManager.getUploadLimiter());
 
+// Stripe needs the raw body to verify the signature — mounted before the JSON parser.
+const licenses = require("./routes/licenses");
+app.post("/api/licenses/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), licenses.stripeWebhook);
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -104,6 +108,8 @@ app.get(["/health", "/api/health"], async (req, res) => {
 
 // ── API routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
+app.use("/api/licenses/admin", licenses.admin); // auth inside
+app.use("/api/licenses", licenses.router);       // public shop endpoints
 app.use("/api/business", businessRoutes);
 
 // /stream/:id and /public are reachable without a login (the route checks the
