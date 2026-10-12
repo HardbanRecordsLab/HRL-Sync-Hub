@@ -110,13 +110,30 @@ async function backfill() {
   if (!todo.length) return;
   logger.info(`Preview backfill: ${todo.length} tracks to prepare`);
   let ok = 0;
+  let streak = 0;
   for (const t of todo) {
-    try {
-      await ensurePreview(t);
-      ok++;
-      if (ok % 50 === 0) logger.info(`Preview backfill: ${ok}/${todo.length}`);
-    } catch (e) {
-      logger.warn(`Preview ${t.id} failed: ${e.message}`);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await ensurePreview(t);
+        ok++;
+        streak = 0;
+        if (ok % 50 === 0) logger.info(`Preview backfill: ${ok}/${todo.length}`);
+        break;
+      } catch (e) {
+        // Storage/network trouble (e.g. DNS right after a redeploy): wait and retry instead of
+        // burning through the whole catalogue with errors. Other errors: skip this track.
+        const transient = /EAI_AGAIN|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|socket hang up/i.test(e.message);
+        if (transient && attempt < 6) {
+          await new Promise((r) => setTimeout(r, 30_000));
+          continue;
+        }
+        logger.warn(`Preview ${t.id} failed: ${e.message}`);
+        if (++streak >= 10) {
+          logger.error("Preview backfill stopped after 10 failures in a row — previews will be built on first play.");
+          return;
+        }
+        break;
+      }
     }
   }
   logger.info(`Preview backfill finished: ${ok}/${todo.length}`);

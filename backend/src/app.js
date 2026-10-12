@@ -22,6 +22,7 @@ const fs = require("fs");
 
 const { logger } = require("./utils/logger");
 const { pool } = require("./db/pool");
+const objectStore = require("./services/storage");
 const errorHandler = require("./middleware/errorHandler");
 const authMiddleware = require("./middleware/auth");
 const { getHelmetConfig, RateLimitManager } = require("./middleware/security");
@@ -87,6 +88,22 @@ const publicDir = path.join(__dirname, "../public");
 if (fs.existsSync(publicDir)) app.use("/public", express.static(publicDir));
 
 // ── Health ───────────────────────────────────────────────────────────────────
+// Storage is checked too (cached 30 s): on 2026-10-12 a redeploy left the API without a route
+// to MinIO and every stream failed while /health still said "ok".
+let storageCheck = { at: 0, ok: false };
+async function storageOk() {
+  if (Date.now() - storageCheck.at < 30_000) return storageCheck.ok;
+  let ok = false;
+  try {
+    await Promise.race([objectStore.ensureReady(), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 4000))]);
+    ok = true;
+  } catch {
+    ok = false;
+  }
+  storageCheck = { at: Date.now(), ok };
+  return ok;
+}
+
 app.get(["/health", "/api/health"], async (req, res) => {
   let dbOk = false;
   try {
@@ -95,8 +112,10 @@ app.get(["/health", "/api/health"], async (req, res) => {
   } catch {
     /* reported below */
   }
-  res.status(dbOk ? 200 : 503).json({
-    status: dbOk ? "ok" : "degraded",
+  const stOk = await storageOk();
+  res.status(dbOk && stOk ? 200 : 503).json({
+    status: dbOk && stOk ? "ok" : "degraded",
+    storage_ok: stOk,
     app: "HRL Sync API",
     version: require("../package.json").version,
     db: dbOk ? "connected" : "error",
