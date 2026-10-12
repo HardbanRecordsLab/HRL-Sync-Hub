@@ -92,8 +92,9 @@ router.get("/stream/:id", async (req, res) => {
   const { shareToken } = req.query;
   const trackId = req.params.id;
 
-  // Who may listen, and to what: the logged-in team (and share links where the owner allowed
-  // downloads) get the original; everyone else gets the watermarked preview.
+  // Who may listen, and to what: only the logged-in team gets the original. Everyone else —
+  // public catalog and pitch links alike — gets the watermarked preview. Clean files are sold
+  // exclusively through a paid licence (routes/licenses.js).
   let access = null; // "full" | "preview"
   if (req.userId) {
     // Shared catalog: any logged-in user has access, not just the uploader
@@ -104,12 +105,12 @@ router.get("/stream/:id", async (req, res) => {
   if (!access && shareToken) {
     // Check if track is part of a playlist with this active share token
     const link = await queryOne(
-      `SELECT sl.id, sl.allow_downloads FROM shareable_links sl
+      `SELECT sl.id FROM shareable_links sl
        JOIN playlist_tracks pt ON pt.playlist_id = sl.playlist_id
        WHERE sl.link_token = $1 AND pt.track_id = $2 AND sl.is_active = true`,
       [shareToken, trackId]
     );
-    if (link) access = link.allow_downloads ? "full" : "preview";
+    if (link) access = "preview";
   }
 
   if (!access) {

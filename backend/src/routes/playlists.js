@@ -188,12 +188,13 @@ router.post("/:id/reorder", async (req, res) => {
 router.post("/:id/share-link", async (req, res) => {
   const pl = await queryOne("SELECT id FROM playlists WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
   if (!pl) return res.status(404).json({ error: "Not found" });
-  const { allow_downloads, require_email, expires_in_days } = req.body;
+  const { require_email, expires_in_days } = req.body;
   const token = crypto.randomBytes(16).toString("hex");
   const expires_at = expires_in_days ? new Date(Date.now() + parseInt(expires_in_days)*86400000).toISOString() : null;
   const { rows: [sl] } = await query(
     "INSERT INTO shareable_links (playlist_id,link_token,allow_downloads,require_email,expires_at) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-    [req.params.id, token, !!allow_downloads, !!require_email, expires_at]
+    // Downloads are never offered on share links: clean files are sold only through a licence.
+    [req.params.id, token, false, !!require_email, expires_at]
   );
   const base = process.env.FRONTEND_URL || "https://sync.hardbanrecordslab.online";
   res.json({ ...sl, share_url: `${base}/share/${token}` });
@@ -206,10 +207,9 @@ router.patch("/links/:linkId", async (req, res) => {
     [req.params.linkId, req.userId]
   );
   if (!link) return res.status(404).json({ error: "Not found" });
-  const { is_active, allow_downloads } = req.body;
+  const { is_active } = req.body;
   const sets = [], params = [];
   if (is_active       !== undefined) { params.push(is_active);       sets.push(`is_active=$${params.length}`); }
-  if (allow_downloads !== undefined) { params.push(allow_downloads); sets.push(`allow_downloads=$${params.length}`); }
   if (!sets.length) return res.status(400).json({ error: "Nothing to update" });
   params.push(req.params.linkId);
   const { rows: [sl] } = await query(`UPDATE shareable_links SET ${sets.join(",")} WHERE id=$${params.length} RETURNING *`, params);

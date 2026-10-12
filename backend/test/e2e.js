@@ -301,6 +301,7 @@ async function check(name, fn) {
     assert.strictEqual(r.status, 200, JSON.stringify(r.body));
     shareToken = r.body.link_token;
     assert(shareToken, "share token");
+    assert.strictEqual(r.body.allow_downloads, false, "share links never allow free downloads");
   });
 
   await check("PUBLIC GET /api/playlists/share/:token → playlist + track, no auth", async () => {

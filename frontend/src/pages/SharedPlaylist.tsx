@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Music2, Loader2, Download } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, Music2, Loader2 } from "lucide-react";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { sharedStreamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { LicenseDialog } from "@/components/LicenseDialog";
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
@@ -15,6 +17,7 @@ function fmt(s: number | null) {
 export default function SharedPlaylist() {
   const { token } = useParams<{ token: string }>();
   const player    = usePlayer();
+  const [licensing, setLicensing] = useState<{ id: string | number; title: string; artist: string } | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["shared", token],
@@ -128,16 +131,12 @@ export default function SharedPlaylist() {
                   {track.bpm  && <span className="hrl-badge-dim">{track.bpm} BPM</span>}
                   {track.key  && <span className="hrl-badge-dim">{track.key}</span>}
                   <span className="mono text-sm text-muted-foreground">{fmt(track.duration)}</span>
-                  {link.allow_downloads && hasAudio && token && (
-                    <a
-                      href={sharedStreamUrl(track.id, token)}
-                      download
-                      onClick={e => { e.stopPropagation(); eventMut.mutate({ event_type: "track_downloaded", track_id: track.id }); }}
-                      className="text-muted-foreground hover:text-foreground transition"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </a>
-                  )}
+                  <button
+                    onClick={e => { e.stopPropagation(); setLicensing({ id: track.id, title: track.title, artist: track.artist }); }}
+                    className="text-xs font-medium px-3 py-1 rounded-full border border-violet-500/40 text-violet-200 hover:bg-violet-500/15"
+                  >
+                    License
+                  </button>
                 </div>
               </div>
             );
@@ -191,6 +190,7 @@ export default function SharedPlaylist() {
           <a href="/privacy" className="hover:text-foreground transition">Prywatność</a>
         </p>
       </div>
+      <LicenseDialog track={licensing} onClose={() => setLicensing(null)} />
     </div>
   );
 }

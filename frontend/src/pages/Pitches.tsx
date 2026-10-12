@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -228,7 +227,6 @@ export default function Pitches() {
                               <span className="font-mono text-muted-foreground truncate flex-1">
                                 {window.location.origin}/share/{link.token}
                               </span>
-                              {link.allow_downloads && <span className="hrl-badge-dim">DL</span>}
                               {link.expires_at && (
                                 <span className="hrl-label text-muted-foreground">
                                   exp. {new Date(link.expires_at).toLocaleDateString()}
@@ -256,14 +254,7 @@ export default function Pitches() {
                       {/* New link form */}
                       <div className="space-y-3">
                         <p className="hrl-label text-muted-foreground">Create new link</p>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id={`dl-${pl.id}`}
-                            checked={shareForm.allow_downloads}
-                            onCheckedChange={v => setShareForm(f => ({ ...f, allow_downloads: v }))}
-                          />
-                          <Label htmlFor={`dl-${pl.id}`} className="hrl-label cursor-pointer">Allow downloads</Label>
-                        </div>
+                        <p className="text-xs text-muted-foreground">Listeners hear watermarked previews and can buy a licence for the clean file.</p>
                         <div className="flex gap-2">
                           <Input
                             placeholder="Expires in days (optional)"
