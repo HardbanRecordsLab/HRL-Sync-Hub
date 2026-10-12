@@ -352,6 +352,21 @@ async function check(name, fn) {
     assert.strictEqual(r.status, 409, JSON.stringify(r.body));
   });
 
+  const binary = (res, cb) => { const c = []; res.on("data", (d) => c.push(d)); res.on("end", () => cb(null, Buffer.concat(c))); };
+
+  await check("anonymous listeners get a watermarked MP3 preview, the team gets the original", async () => {
+    const anon = await request(app).get(`/api/tracks/stream/${licTrackId}`).buffer(true).parse(binary);
+    assert.strictEqual(anon.status, 200, `got ${anon.status} ${anon.body}`);
+    assert.strictEqual(anon.headers["x-audio-quality"], "preview");
+    assert.strictEqual(anon.headers["content-type"], "audio/mpeg");
+    assert(anon.body.length > 0 && !anon.body.equals(fakeAudio), "preview is not the original file");
+    const again = await request(app).get(`/api/tracks/stream/${licTrackId}`).set("Range", "bytes=0-9");
+    assert.strictEqual(again.status, 206, "cached preview supports Range");
+    const team = await request(app).get(`/api/tracks/stream/${licTrackId}?token=${adminToken}`).buffer(true).parse(binary);
+    assert.strictEqual(team.headers["x-audio-quality"], "original");
+    assert(team.body.equals(fakeAudio), "team hears the original");
+  });
+
   await check("checkout requires both consents → 400", async () => {
     await pool.query("UPDATE tracks SET clearance_status = 'cleared_ready' WHERE id = $1", [licTrackId]);
     const r = await request(app).post("/api/licenses/checkout").send({
@@ -415,8 +430,9 @@ async function check(name, fn) {
   });
 
   await check("paid licence downloads the full file; unknown token → 404", async () => {
-    const r = await request(app).get(`/api/licenses/download/${paidOrder.download_token}`);
+    const r = await request(app).get(`/api/licenses/download/${paidOrder.download_token}`).buffer(true).parse(binary);
     assert.strictEqual(r.status, 200, `got ${r.status}`);
+    assert(r.body.equals(fakeAudio), "buyer gets the original, not the preview");
     assert(/attachment/.test(r.headers["content-disposition"]), "attachment");
     assert(r.headers["content-disposition"].includes(paidOrder.number), "number in filename");
     const bad = await request(app).get(`/api/licenses/download/${"0".repeat(48)}`);

@@ -4,6 +4,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install production deps against the lockfile
+# ffmpeg builds the watermarked public previews (services/preview.js)
+RUN apk add --no-cache ffmpeg
+
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 

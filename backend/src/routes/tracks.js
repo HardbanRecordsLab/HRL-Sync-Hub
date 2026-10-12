@@ -4,6 +4,7 @@ const { query, queryOne, queryAll } = require("../db/pool");
 const { catalogQuery } = require("../db/catalogPool");
 const { logger } = require("../utils/logger");
 const objectStore = require("../services/storage");
+const preview = require("../services/preview");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -91,71 +92,84 @@ router.get("/stream/:id", async (req, res) => {
   const { shareToken } = req.query;
   const trackId = req.params.id;
 
-  let hasAccess = false;
+  // Who may listen, and to what: the logged-in team (and share links where the owner allowed
+  // downloads) get the original; everyone else gets the watermarked preview.
+  let access = null; // "full" | "preview"
   if (req.userId) {
     // Shared catalog: any logged-in user has access, not just the uploader
     const track = await queryOne("SELECT id FROM tracks WHERE id=$1", [trackId]);
-    if (track) hasAccess = true;
+    if (track) access = "full";
   }
 
-  if (!hasAccess && shareToken) {
+  if (!access && shareToken) {
     // Check if track is part of a playlist with this active share token
     const link = await queryOne(
-      `SELECT sl.id FROM shareable_links sl 
+      `SELECT sl.id, sl.allow_downloads FROM shareable_links sl
        JOIN playlist_tracks pt ON pt.playlist_id = sl.playlist_id
        WHERE sl.link_token = $1 AND pt.track_id = $2 AND sl.is_active = true`,
       [shareToken, trackId]
     );
-    if (link) hasAccess = true;
+    if (link) access = link.allow_downloads ? "full" : "preview";
   }
 
-  if (!hasAccess) {
+  if (!access) {
     // Check if the track itself is marked as public
     const trackInfo = await queryOne("SELECT is_public FROM tracks WHERE id=$1", [trackId]);
-    if (trackInfo?.is_public) hasAccess = true;
+    if (trackInfo?.is_public) access = "preview";
   }
 
-  if (!hasAccess) return res.status(401).json({ error: "Unauthorized access to this audio track" });
+  if (!access) return res.status(401).json({ error: "Unauthorized access to this audio track" });
 
   const track = await queryOne("SELECT * FROM tracks WHERE id=$1", [trackId]);
   if (!track) return res.status(404).json({ error: "Track not found" });
+  if (track.source !== "local" || !track.object_key) return res.status(404).json({ error: "Track has no playable file" });
 
-  if (track.source === "local" && track.object_key) {
-    const key = path.basename(track.object_key); // defends against any '../'
-    const meta = await objectStore.head(key);
-    if (!meta) return res.status(404).json({ error: "File missing from storage" });
-
-    const size = meta.size;
-    const type = track.mime_type || "audio/mpeg";
-    res.setHeader("Accept-Ranges", "bytes");
-    res.setHeader("Cache-Control", "private, no-store");
-
-    const m = req.headers.range && /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
-    if (m) {
-      let start = m[1] ? parseInt(m[1], 10) : 0;
-      let end = m[2] ? parseInt(m[2], 10) : size - 1;
-      if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
-        res.setHeader("Content-Range", `bytes */${size}`);
-        return res.status(416).end();
-      }
-      end = Math.min(end, size - 1);
-      res.writeHead(206, {
-        "Content-Range": `bytes ${start}-${end}/${size}`,
-        "Content-Length": end - start + 1,
-        "Content-Type": type,
-      });
-      const partial = await objectStore.getStream(key, { start, end });
-      partial.on("error", (e) => { logger.error(`stream ${key}: ${e.message}`); res.destroy(); });
-      return partial.pipe(res);
+  let key = path.basename(track.object_key); // defends against any '../'
+  let type = track.mime_type || "audio/mpeg";
+  if (access === "preview") {
+    try {
+      key = await preview.ensurePreview(track);
+      type = "audio/mpeg";
+    } catch (e) {
+      logger.error(`preview ${track.id}: ${e.message}`);
+      key = null;
     }
-
-    res.writeHead(200, { "Content-Length": size, "Content-Type": type });
-    const full = await objectStore.getStream(key);
-    full.on("error", (e) => { logger.error(`stream ${key}: ${e.message}`); res.destroy(); });
-    return full.pipe(res);
+    // Never fall back to the original for anonymous listeners.
+    if (!key) return res.status(503).json({ error: "Preview is being prepared — try again in a moment." });
   }
 
-  return res.status(404).json({ error: "Track has no playable file" });
+  const meta = await objectStore.head(key);
+  if (!meta) return res.status(404).json({ error: "File missing from storage" });
+
+  const size = meta.size;
+  res.setHeader("Accept-Ranges", "bytes");
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Audio-Quality", access === "full" ? "original" : "preview");
+  if (access === "preview") res.setHeader("Content-Disposition", `inline; filename="preview-${track.id}.mp3"`);
+
+  const m = req.headers.range && /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
+  if (m) {
+    let start = m[1] ? parseInt(m[1], 10) : 0;
+    let end = m[2] ? parseInt(m[2], 10) : size - 1;
+    if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
+      res.setHeader("Content-Range", `bytes */${size}`);
+      return res.status(416).end();
+    }
+    end = Math.min(end, size - 1);
+    res.writeHead(206, {
+      "Content-Range": `bytes ${start}-${end}/${size}`,
+      "Content-Length": end - start + 1,
+      "Content-Type": type,
+    });
+    const partial = await objectStore.getStream(key, { start, end });
+    partial.on("error", (e) => { logger.error(`stream ${key}: ${e.message}`); res.destroy(); });
+    return partial.pipe(res);
+  }
+
+  res.writeHead(200, { "Content-Length": size, "Content-Type": type });
+  const full = await objectStore.getStream(key);
+  full.on("error", (e) => { logger.error(`stream ${key}: ${e.message}`); res.destroy(); });
+  return full.pipe(res);
 });
 
 const uploadSingle = (req, res, next) =>

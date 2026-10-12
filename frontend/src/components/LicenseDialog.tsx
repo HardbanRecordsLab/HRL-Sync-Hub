@@ -119,7 +119,7 @@ export function LicenseDialog({ track, onClose }: { track: TrackRef | null; onCl
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
               {quote ? "Request a quote" : `Pay ${selected?.price?.toFixed(0) ?? ""} zł`}
             </button>
-            {!quote && <p className="text-xs text-muted-foreground text-center">Secure payment by Stripe. Price is final (seller exempt from VAT). You get the full-quality file and a PDF licence by e-mail right away.</p>}
+            {!quote && <p className="text-xs text-muted-foreground text-center">Secure payment by Stripe. Price is final (seller exempt from VAT). You get the clean, full-quality file (no watermark) and a PDF licence by e-mail right away.</p>}
           </form>
         )}
       </DialogContent>

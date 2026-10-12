@@ -41,6 +41,10 @@ const PORT = process.env.PORT || 3001;
     logger.info(`🎵 HRL Sync API — port ${PORT} | env: ${process.env.NODE_ENV || "development"}`);
     logger.info(`   CORS origins: ${allowedOrigins.join(", ")}`);
   });
+  // Prepare watermarked previews for the public catalogue in the background.
+  if (process.env.PREVIEW_BACKFILL !== "false") {
+    setTimeout(() => require("./services/preview").backfill().catch((e) => logger.error(`Preview backfill: ${e.message}`)), 30_000);
+  }
 })();
 
 module.exports = app;

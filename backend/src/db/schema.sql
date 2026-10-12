@@ -343,3 +343,12 @@ CREATE TABLE IF NOT EXISTS license_inquiries (
   message     TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ─── Watermarked previews for public listening (2026-10-12) ────────────────
+-- Local index (the shared CMLP `tracks` table is never altered); see services/preview.js.
+CREATE TABLE IF NOT EXISTS track_previews (
+  track_id    INTEGER PRIMARY KEY,
+  object_key  TEXT NOT NULL,
+  version     TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

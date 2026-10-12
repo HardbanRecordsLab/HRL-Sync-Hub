@@ -52,7 +52,7 @@ export default function PublicLibrary() {
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Music catalog</h1>
           <p className="text-muted-foreground max-w-2xl">
             Original music from Hardban Records Lab, available for sync licensing in film, advertising, games and online content.
-            Press play on any track — no account needed — and license it online in a minute: from 79 zł for online videos, 429 zł for ads and commercial use.
+            Press play on any track — no account needed — and license it online in a minute: from 79 zł for online videos, 429 zł for ads and commercial use. Previews carry a soft audible watermark; the licensed file is clean, full quality.
           </p>
         </div>
 
