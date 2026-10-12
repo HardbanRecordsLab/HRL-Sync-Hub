@@ -43,14 +43,18 @@ jobs:
             cd ${{ secrets.DEPLOY_DIR }}
             git pull --ff-only origin main
             docker compose up -d --build
-            # docker compose 2.24 sometimes recreates the api container with only one of its two
-            # networks (2026-10-12: no route to MinIO, every stream failed). Re-attach if missing.
+            # docker compose 2.24 sometimes recreates the api container with only ONE of its two
+            # networks (2026-10-12: once no route to MinIO, once none to Postgres). Re-attach any
+            # missing one: the compose default network and, on this host, the shared DB network.
             API=$(docker compose ps -q api)
-            NET="$(basename "$PWD" | tr -cd 'a-z0-9_-')_default"
-            if ! docker inspect "$API" --format '{{json .NetworkSettings.Networks}}' | grep -q "\"$NET\""; then
-              echo "api container is missing $NET — reconnecting"
-              docker network connect --alias api "$NET" "$API"
-            fi
+            NETS="$(basename "$PWD" | tr -cd 'a-z0-9_-')_default"
+            if grep -qs hbrl-db docker-compose.override.yml; then NETS="$NETS hbrl-db"; fi
+            for NET in $NETS; do
+              if ! docker inspect "$API" --format '{{json .NetworkSettings.Networks}}' | grep -q "\"$NET\""; then
+                echo "api container is missing $NET — reconnecting"
+                docker network connect --alias api "$NET" "$API"
+              fi
+            done
             echo "Waiting for API to report healthy..."
             # 2026-09-22: a recreate-only-one-container deploy occasionally hits a slow
             # DNS resolution window for the sibling minio container (~70s of retries,
