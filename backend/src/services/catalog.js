@@ -7,6 +7,18 @@ let cache = { at: 0, rows: [] };
 
 const arr = (v) => (Array.isArray(v) ? v.map((x) => String(x).toLowerCase().trim()).filter(Boolean) : []);
 
+// The v2.1 analysis set energyLevel "Medium" and hasVocals true on every track, so both are derived here:
+// energy from tempo + mood words, vocals from the vocal style ("none" = instrumental).
+const HIGH = ["energetic", "driving", "uplifting", "euphoric", "aggressive", "powerful", "intense", "triumphant", "anthemic", "explosive", "upbeat", "kinetic", "fierce", "playful"];
+const LOW = ["calm", "relaxed", "serene", "dreamy", "melancholic", "peaceful", "tender", "meditative", "soothing", "gentle", "mellow", "chill", "contemplative", "introspective", "wistful"];
+
+function estimateEnergy(bpm, moods) {
+  let s = 0;
+  if (bpm) s += bpm >= 125 ? 1 : bpm < 90 ? -1 : 0;
+  moods.forEach((m) => { if (HIGH.some((w) => m.includes(w))) s += 1; if (LOW.some((w) => m.includes(w))) s -= 1; });
+  return s >= 2 ? "High" : s <= -2 ? "Low" : "Medium";
+}
+
 function slim(t) {
   const meta = t.metadata && typeof t.metadata === "object" ? t.metadata : {};
   const mood = Array.isArray(t.mood) ? { tags: t.mood } : t.mood && typeof t.mood === "object" ? t.mood : {};
@@ -14,10 +26,10 @@ function slim(t) {
     id: t.id, title: t.title, artist: t.artist, duration: t.duration, bpm: t.bpm, key: t.key,
     genre: t.genre || null,
     moods: arr(mood.tags),
-    energy: mood.energyLevel || null,
+    energy: estimateEnergy(t.bpm, arr(mood.tags)),
     vibe: mood.vibe || null,
-    vocals: typeof meta.hasVocals === "boolean" ? meta.hasVocals : null,
-    vocal_gender: meta.vocalStyle?.gender || null,
+    vocals: (meta.vocalStyle?.gender || "").toLowerCase() === "none" ? false : typeof meta.hasVocals === "boolean" ? meta.hasVocals : null,
+    vocal_gender: ["none", ""].includes((meta.vocalStyle?.gender || "").toLowerCase()) ? null : meta.vocalStyle.gender.toLowerCase(),
     keywords: arr(meta.keywords),
     use_cases: Array.isArray(meta.useCases) ? meta.useCases.slice(0, 6) : [],
     instruments: arr(meta.instrumentation),

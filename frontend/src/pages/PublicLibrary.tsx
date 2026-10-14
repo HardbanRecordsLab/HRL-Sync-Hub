@@ -146,7 +146,7 @@ export default function PublicLibrary() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select label="Mood" value={mood} onChange={(v) => { setMood(v); setLikeOf(null); }} options={moodOptions} />
-            <Select label="Energy" value={energy} onChange={(v) => { setEnergy(v); setLikeOf(null); }} options={[["low", "Low"], ["medium", "Medium"], ["high", "High"]]} />
+            <Select label="Energy (est.)" value={energy} onChange={(v) => { setEnergy(v); setLikeOf(null); }} options={[["low", "Low"], ["medium", "Medium"], ["high", "High"]]} />
             <Select label="Vocals" value={vocals} onChange={(v) => { setVocals(v); setLikeOf(null); }} options={[["vocal", "With vocals"], ["female", "Female vocal"], ["male", "Male vocal"], ["instrumental", "Instrumental"]]} />
             <Select label="Tempo" value={tempo} onChange={(v) => { setTempo(v); setLikeOf(null); }} options={[["slow", "Slow (< 90 BPM)"], ["mid", "Medium (90–120)"], ["fast", "Fast (> 120)"]]} />
             <Select label="Genre" value={genre} onChange={(v) => { setGenre(v); setLikeOf(null); }} options={genreOptions} />
