@@ -20,7 +20,6 @@ const Projects = lazy(() => import("./pages/Projects"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Settings = lazy(() => import("./pages/Settings"));
 const LyricsCatalog = lazy(() => import("./pages/LyricsCatalog"));
-const BusinessHub = lazy(() => import("./pages/BusinessHub"));
 const PublicLibrary = lazy(() => import("./pages/PublicLibrary"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -73,7 +72,6 @@ function AppRoutes() {
         <Route path="/pitches/:playlistId" element={<Protected><PlaylistDetail /></Protected>} />
         <Route path="/contacts" element={<Protected><Contacts /></Protected>} />
         <Route path="/projects" element={<Protected><Projects /></Protected>} />
-        <Route path="/business" element={<Protected><BusinessHub /></Protected>} />
         <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
         <Route path="/sales" element={<Protected><Licenses /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />

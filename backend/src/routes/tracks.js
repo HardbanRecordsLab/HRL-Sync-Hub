@@ -458,23 +458,29 @@ router.post("/:id/tag-via-metadata-engine", requireAdmin, async (req, res) => {
   }
 });
 
+/** CMLP stores mood as {tags[], vibe, energyLevel}; older rows may hold a bare array. */
+function moodObject(m) {
+  if (Array.isArray(m)) return { tags: m.map(String) };
+  if (m && typeof m === "object") return { ...m, tags: Array.isArray(m.tags) ? m.tags : [] };
+  return { tags: [] };
+}
+
 // ── GET /api/tracks/:id ────────────────────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   const track = await queryOne(
     `SELECT t.*, t.musical_key AS key, t.filename AS file_name, t.object_key AS local_file_path,
-       t.duration_ms/1000 AS duration,
-       COALESCE(t.genre::jsonb, '[]') AS track_genres,
-       COALESCE(t.mood, '[]') AS track_moods,
-       COALESCE(t.metadata->'instruments', '[]') AS track_instruments,
-       COALESCE(t.metadata->'keywords', '[]') AS track_keywords,
-       -- tracks is a postgres_fdw foreign table: no PK is known locally, so no GROUP BY t.id
-       COALESCE((SELECT json_agg(jsonb_build_object('id',l.id,'title',l.title,'status',l.status,'language',l.language))
-                 FROM lyrics l WHERE l.track_id=t.id), '[]') AS lyrics
-     FROM tracks t
-     WHERE t.id=$1`,
+       t.duration_ms/1000 AS duration
+     FROM tracks t WHERE t.id=$1`,
     [req.params.id]
   );
   if (!track) return res.status(404).json({ error: "Track not found" });
+  // genre is plain text in CMLP ("Cinematic Neo-Soul"); mood is {tags[], vibe, energyLevel}.
+  const mood = moodObject(track.mood);
+  track.track_moods = mood.tags || [];
+  track.mood_vibe = mood.vibe || null;
+  track.energy_level = mood.energyLevel || null;
+  track.metadata = track.metadata && typeof track.metadata === "object" ? track.metadata : {};
+  track.lyrics = await queryAll("SELECT id, title, status, language FROM lyrics WHERE track_id=$1", [track.id]);
   res.json(track);
 });
 
@@ -502,21 +508,67 @@ router.post("/", requireAdmin, async (req, res) => {
 
 // ── PATCH /api/tracks/:id ──────────────────────────────────────────────────────
 router.patch("/:id", async (req, res) => {
-  // Sync-Hub field name -> real CMLP column name (and any value transform, e.g. seconds -> ms)
+  const text = (v) => (v === null || v === undefined || String(v).trim() === "" ? null : String(v).trim().slice(0, 2000));
+  const int = (min, max) => (v) => {
+    if (v === null || v === undefined || String(v).trim() === "") return null;
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n) || n < min || n > max) throw Object.assign(new Error(`Invalid number: ${v}`), { status: 400 });
+    return n;
+  };
+  const CLEAR = ["cleared_ready", "in_progress", "not_cleared"];
+  // Sync-Hub field name -> real CMLP column name and value transform
   const COLMAP = {
-    title: "title", artist: "artist", composer: "composer", isrc: "isrc", iswc: "iswc",
-    catalog_number: "catalog_number", bpm: "bpm", key: "musical_key", description: "description",
-    clearance_status: "clearance_status", mime_type: "mime_type", file_name: "filename",
-    duration: ["duration_ms", (v) => v * 1000],
+    title: ["title", (v) => text(v) || (() => { throw Object.assign(new Error("Title cannot be empty"), { status: 400 }); })()],
+    artist: ["artist", (v) => text(v) || (() => { throw Object.assign(new Error("Artist cannot be empty"), { status: 400 }); })()],
+    composer: ["composer", text], isrc: ["isrc", text], iswc: ["iswc", text], catalog_number: ["catalog_number", text],
+    album: ["album", text], genre: ["genre", text], description: ["description", text], key: ["musical_key", text],
+    bpm: ["bpm", int(20, 400)], year: ["year", int(1900, 2100)],
+    explicit: ["explicit", (v) => v === true || v === "true"],
+    clearance_status: ["clearance_status", (v) => {
+      if (!CLEAR.includes(v)) throw Object.assign(new Error("Invalid clearance status"), { status: 400 });
+      return v;
+    }],
+    mime_type: ["mime_type", text], file_name: ["filename", text],
+    duration: ["duration_ms", (v) => { const n = int(1, 36000)(v); return n === null ? null : n * 1000; }],
   };
   const sets = [], params = [];
-  Object.keys(COLMAP).forEach(k => {
-    if (req.body[k] === undefined) return;
-    const m = COLMAP[k];
-    const [col, xform] = Array.isArray(m) ? m : [m, (v) => v];
-    params.push(xform(req.body[k]));
-    sets.push(`${col}=$${params.length}`);
-  });
+  try {
+    for (const k of Object.keys(COLMAP)) {
+      if (req.body[k] === undefined) continue;
+      const [col, xform] = COLMAP[k];
+      params.push(xform(req.body[k]));
+      sets.push(`${col}=$${params.length}`);
+    }
+  } catch (e) {
+    return res.status(e.status || 400).json({ error: e.message });
+  }
+  // Mood (tags / vibe / energy) lives in one jsonb object shared with CMLP — merge, never replace.
+  const moodPatch = {};
+  if (Array.isArray(req.body.moods)) moodPatch.tags = req.body.moods.map((x) => String(x).trim()).filter(Boolean).slice(0, 30);
+  if (req.body.mood_vibe !== undefined) moodPatch.vibe = text(req.body.mood_vibe);
+  if (req.body.energy_level !== undefined) moodPatch.energyLevel = text(req.body.energy_level);
+
+  // Analysis block (keywords, use cases, instrumentation…) — merge selected keys only.
+  const META_LISTS = ["keywords", "useCases", "instrumentation", "additionalGenres", "similarArtists"];
+  const metaPatch = {};
+  for (const k of META_LISTS) {
+    if (Array.isArray(req.body[k])) metaPatch[k] = req.body[k].map((x) => String(x).trim()).filter(Boolean).slice(0, 50);
+  }
+  if (req.body.targetAudience !== undefined) metaPatch.targetAudience = text(req.body.targetAudience);
+  if (req.body.hasVocals !== undefined) metaPatch.hasVocals = req.body.hasVocals === true || req.body.hasVocals === "true";
+  if (Object.keys(moodPatch).length || Object.keys(metaPatch).length) {
+    const cur = await queryOne("SELECT mood, metadata FROM tracks WHERE id=$1", [req.params.id]);
+    if (!cur) return res.status(404).json({ error: "Not found" });
+    if (Object.keys(moodPatch).length) {
+      params.push(JSON.stringify({ ...moodObject(cur.mood), ...moodPatch }));
+      sets.push(`mood=$${params.length}::jsonb`);
+    }
+    if (Object.keys(metaPatch).length) {
+      const meta = cur.metadata && typeof cur.metadata === "object" ? cur.metadata : {};
+      params.push(JSON.stringify({ ...meta, ...metaPatch }));
+      sets.push(`metadata=$${params.length}::jsonb`);
+    }
+  }
   if (!sets.length) return res.status(400).json({ error: "No valid fields" });
   params.push(req.params.id);
   const { rows: [t] } = await query(
@@ -556,11 +608,10 @@ router.post("/:id/genres", async (req, res) => {
 // ── POST /api/tracks/:id/moods — writes tracks.mood (jsonb array) directly ──────
 router.post("/:id/moods", async (req, res) => {
   const { moods } = req.body; // string[]
-  const { rows: [t] } = await query(
-    "UPDATE tracks SET mood=$1::jsonb,updated_at=now() WHERE id=$2 RETURNING id",
-    [JSON.stringify(moods || []), req.params.id]
-  );
-  if (!t) return res.status(404).json({ error: "Track not found" });
+  const cur = await queryOne("SELECT mood FROM tracks WHERE id=$1", [req.params.id]);
+  if (!cur) return res.status(404).json({ error: "Track not found" });
+  const mood = { ...moodObject(cur.mood), tags: (moods || []).map((x) => String(x).trim()).filter(Boolean).slice(0, 30) };
+  await query("UPDATE tracks SET mood=$1::jsonb,updated_at=now() WHERE id=$2", [JSON.stringify(mood), req.params.id]);
   res.json({ success: true });
 });
 

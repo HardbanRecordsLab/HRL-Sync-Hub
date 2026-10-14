@@ -239,7 +239,7 @@ export default function Library() {
                   <div className="min-w-0">
                     <p className={cn("text-sm font-medium truncate", isActive && "text-violet-300")}>{track.title}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {track.artist}
+                      {[track.artist, track.genre].filter(Boolean).join(" · ")}
                       <span className="md:hidden">{[track.bpm && `${track.bpm} BPM`, track.key, fmtDur(track.duration)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
                     </p>
                   </div>

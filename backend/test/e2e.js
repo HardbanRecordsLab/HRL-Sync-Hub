@@ -327,6 +327,57 @@ async function check(name, fn) {
   });
 
 
+
+  // ── Track metadata (CMLP catalogue shape: text genre, mood object, analysis jsonb) ──
+  let metaTrackId;
+  await check("track page loads a CMLP-shaped track (text genre, mood object, analysis)", async () => {
+    const { rows: [t] } = await pool.query(
+      `INSERT INTO tracks (title, artist, filename, genre, mood, metadata, bpm, musical_key)
+       VALUES ('Korona Szosy','CMLP','korona.mp3','Cinematic Neo-Soul',$1::jsonb,$2::jsonb,144,'G#') RETURNING id`,
+      [JSON.stringify({ tags: ["melancholic", "driving"], vibe: "Night drive", energyLevel: "Medium" }),
+       JSON.stringify({ keywords: ["urban"], useCases: ["car ad"], instrumentation: ["piano"], publisher: "HardbanRecords Lab" })]);
+    metaTrackId = t.id;
+    const r = await request(app).get(`/api/tracks/${metaTrackId}`).set("Authorization", `Bearer ${adminToken}`);
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    assert.strictEqual(r.body.genre, "Cinematic Neo-Soul");
+    assert.deepStrictEqual(r.body.track_moods, ["melancholic", "driving"]);
+    assert.strictEqual(r.body.mood_vibe, "Night drive");
+    assert.deepStrictEqual(r.body.metadata.useCases, ["car ad"]);
+  });
+
+  await check("editing metadata: empty BPM clears it, analysis + moods merge, nothing else lost", async () => {
+    const r = await request(app).patch(`/api/tracks/${metaTrackId}`).set("Authorization", `Bearer ${adminToken}`).send({
+      title: "Korona Szosy", artist: "CMLP", bpm: "", key: "A", album: "Nocne trasy", year: "2026", composer: "",
+      moods: ["calm", "hopeful"], keywords: ["night", "city"], useCases: ["travel vlog"], genre: "Neo-Soul",
+    });
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    const g = await request(app).get(`/api/tracks/${metaTrackId}`).set("Authorization", `Bearer ${adminToken}`);
+    assert.strictEqual(g.body.bpm, null);
+    assert.strictEqual(g.body.key, "A");
+    assert.strictEqual(g.body.album, "Nocne trasy");
+    assert.strictEqual(g.body.year, 2026);
+    assert.deepStrictEqual(g.body.track_moods, ["calm", "hopeful"]);
+    assert.strictEqual(g.body.mood_vibe, "Night drive", "vibe kept");
+    assert.deepStrictEqual(g.body.metadata.keywords, ["night", "city"]);
+    assert.deepStrictEqual(g.body.metadata.instrumentation, ["piano"], "untouched analysis keys kept");
+    assert.strictEqual(g.body.metadata.publisher, "HardbanRecords Lab");
+  });
+
+  await check("invalid edits are rejected with a clear 400", async () => {
+    const h = { Authorization: `Bearer ${adminToken}` };
+    assert.strictEqual((await request(app).patch(`/api/tracks/${metaTrackId}`).set(h).send({ bpm: "fast" })).status, 400);
+    assert.strictEqual((await request(app).patch(`/api/tracks/${metaTrackId}`).set(h).send({ title: "  " })).status, 400);
+    assert.strictEqual((await request(app).patch(`/api/tracks/${metaTrackId}`).set(h).send({ clearance_status: "maybe" })).status, 400);
+  });
+
+  await check("mood chips keep CMLP's mood object", async () => {
+    const r = await request(app).post(`/api/tracks/${metaTrackId}/moods`).set("Authorization", `Bearer ${adminToken}`).send({ moods: ["epic"] });
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    const { rows: [t] } = await pool.query("SELECT mood FROM tracks WHERE id = $1", [metaTrackId]);
+    assert.deepStrictEqual(t.mood.tags, ["epic"]);
+    assert.strictEqual(t.mood.vibe, "Night drive");
+  });
+
   // ── Sync licence shop ─────────────────────────────────────────────────────
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
   let licTrackId, paidOrder;
