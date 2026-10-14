@@ -140,7 +140,7 @@ const { optionalAuth } = authMiddleware;
 app.use(
   "/api/tracks",
   (req, res, next) => {
-    if (req.path.startsWith("/stream/") || req.path === "/public") return optionalAuth(req, res, next);
+    if (req.path.startsWith("/stream/") || req.path === "/public" || req.path.startsWith("/public/")) return optionalAuth(req, res, next);
     return authMiddleware(req, res, next);
   },
   tracksRoutes

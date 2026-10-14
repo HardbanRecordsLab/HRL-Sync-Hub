@@ -225,3 +225,4 @@
 @media (min-width: 768px) {
   .pub-grid { grid-template-columns: 32px minmax(0, 1fr) 56px 56px 64px 84px; }
 }
+.cat-grid { grid-template-columns: 32px minmax(0, 1fr) auto; }

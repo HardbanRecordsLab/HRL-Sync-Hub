@@ -5,6 +5,7 @@ const { catalogQuery } = require("../db/catalogPool");
 const { logger } = require("../utils/logger");
 const objectStore = require("../services/storage");
 const preview = require("../services/preview");
+const catalog = require("../services/catalog");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -319,13 +320,14 @@ router.get("/", async (req, res) => {
 
 // ── GET /api/tracks/public (Public Library) ───────────────────────────────────
 router.get("/public", async (req, res) => {
-  const rows = await queryAll(
-    `SELECT t.id, t.title, t.artist, t.duration_ms/1000 AS duration, t.bpm, t.musical_key AS key, t.clearance_status
-     FROM tracks t
-     WHERE t.is_public = true
-     ORDER BY t.created_at DESC`
-  );
-  res.json({ tracks: rows });
+  res.json({ tracks: await catalog.publicCatalog() });
+});
+
+// "More like this" — public tracks only, by tag overlap + tempo (services/catalog.js).
+router.get("/public/similar/:id", async (req, res) => {
+  const list = catalog.similar(await catalog.publicCatalog(), req.params.id);
+  if (!list) return res.status(404).json({ error: "Track not found" });
+  res.json({ tracks: list });
 });
 
 // ── GET /api/tracks/search (full-text trigram) ─────────────────────────────────
@@ -577,6 +579,7 @@ router.patch("/:id", async (req, res) => {
     params
   );
   if (!t) return res.status(404).json({ error: "Not found" });
+  catalog.invalidate();
   res.json(t);
 });
 

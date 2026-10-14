@@ -379,6 +379,25 @@ async function check(name, fn) {
   });
 
 
+
+  await check("public catalogue exposes analysis tags; 'more like this' ranks the closest track first", async () => {
+    await pool.query("UPDATE tracks SET is_public = true WHERE id = $1", [metaTrackId]);
+    const mk = async (title, genre, tags, bpm) => (await pool.query(
+      `INSERT INTO tracks (title, artist, filename, genre, mood, metadata, bpm, is_public)
+       VALUES ($1,'CMLP','x.mp3',$2,$3::jsonb,$4::jsonb,$5,true) RETURNING id`,
+      [title, genre, JSON.stringify({ tags, energyLevel: "Medium" }), JSON.stringify({ keywords: tags, hasVocals: true }), bpm])).rows[0].id;
+    const near = await mk("Nocny Spacer", "Neo-Soul", ["calm", "hopeful", "night", "city"], 140);
+    await mk("Rave Storm", "Hard Techno", ["aggressive", "dark"], 150);
+    require("../src/services/catalog").invalidate();
+    const cat = await request(app).get("/api/tracks/public");
+    const me = cat.body.tracks.find((t) => t.id === metaTrackId);
+    assert(me && me.moods.includes("epic") && me.keywords.includes("night") && me.vibe === "Night drive", JSON.stringify(me));
+    const sim = await request(app).get(`/api/tracks/public/similar/${metaTrackId}`);
+    assert.strictEqual(sim.status, 200, JSON.stringify(sim.body));
+    assert.strictEqual(sim.body.tracks[0].id, near, "closest first");
+    assert.strictEqual((await request(app).get("/api/tracks/public/similar/999999")).status, 404);
+  });
+
   // ── Promotion partners ────────────────────────────────────────────────────
   let partnerId;
   await check("promo: team only; starter list seeds once", async () => {

@@ -73,6 +73,12 @@ export default function TrackDetail() {
     queryKey: ["track", trackId],
     queryFn: () => api.get<any>(`/api/tracks/${trackId}`),
   });
+  const { data: similar = [] } = useQuery({
+    queryKey: ["tracks", "similar", trackId],
+    queryFn: async () => (await api.get<{ tracks: any[] }>(`/api/tracks/public/similar/${trackId}`)).tracks.slice(0, 8),
+    enabled: !!track?.is_public,
+    retry: false,
+  });
 
   // Seed the form from the loaded track — also when the page opens straight in edit mode
   // (Library "…" → Edit metadata). Previously it only seeded outside edit mode, so that path showed empty fields.
@@ -274,6 +280,22 @@ export default function TrackDetail() {
               </div>
               {m.analysisVersion && <p className="text-xs text-muted-foreground">AI analysis v{m.analysisVersion}{m.confidence ? ` · confidence ${Math.round(m.confidence * 100)}%` : ""}</p>}
             </section>
+
+            {/* Similar */}
+            {similar.length > 0 && (
+              <section className="hrl-card p-5">
+                <h2 className="text-base font-semibold mb-3">Similar tracks</h2>
+                <div className="space-y-1">
+                  {similar.map((s: any) => (
+                    <button key={s.id} onClick={() => navigate(`/library/${s.id}`)} className="w-full flex items-center justify-between gap-2 text-sm text-left hover:text-violet-300">
+                      <span className="truncate">{s.title}<span className="text-muted-foreground"> · {s.genre}</span></span>
+                      <span className="text-xs text-muted-foreground shrink-0">{s.similarity}%</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Handy for pitch playlists — add a few similar options.</p>
+              </section>
+            )}
 
             {/* Lyrics */}
             <section className="hrl-card p-5">
