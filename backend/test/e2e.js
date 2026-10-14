@@ -430,6 +430,20 @@ async function check(name, fn) {
     assert.strictEqual(me.wins, 1);
   });
 
+  await check("promo: pitch e-mail draft with a tracked share link (template when AI is off)", async () => {
+    const h = { Authorization: `Bearer ${adminToken}` };
+    const r = await request(app).post("/api/promo/pitch").set(h).send({ partner_id: partnerId, track_ids: [metaTrackId] });
+    assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+    assert(/\/share\/[a-f0-9]{32}$/.test(r.body.share_url), r.body.share_url);
+    assert(r.body.body.includes(r.body.share_url) && !r.body.body.includes("{{"), r.body.body);
+    assert.strictEqual(r.body.to, "curator@example.com");
+    const token = r.body.share_url.split("/share/")[1];
+    const shared = await request(app).get(`/api/playlists/share/${token}`);
+    assert.strictEqual(shared.status, 200);
+    assert.strictEqual(shared.body.playlist.tracks[0].id, metaTrackId);
+    assert.strictEqual((await request(app).post("/api/promo/pitch").set(h).send({ partner_id: partnerId, track_ids: [] })).status, 400);
+  });
+
   await check("promo: public application form → accept creates a partner", async () => {
     const bad = await request(app).post("/api/promo/public/apply").send({ name: "Radio X", url: "radio.example", contact_name: "Ola", contact_email: "ola@radio.example", consent: true });
     assert.strictEqual(bad.status, 400, "link must be https");

@@ -212,4 +212,79 @@ router.post("/applications/:id/:action", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Pitch e-mail: a share link (watermarked previews, opens/plays tracked) + an AI draft ──────────────
+// Only outlet and catalogue data go to the model — never the contact's name or e-mail (privacy policy, AI section).
+const crypto = require("crypto");
+const aiService = require("../services/aiService");
+
+const PL_COUNTRIES = ["pl", "polska", "poland"];
+
+function fallbackPitch(pl, partner, tracks, link) {
+  const list = tracks.map((t) => `• ${t.title}${t.genre ? ` (${t.genre})` : ""}`).join("\n");
+  return pl
+    ? { subject: `Muzyka do ${partner.name} — ${tracks.length === 1 ? tracks[0].title : "propozycje od HardbanRecords Lab"}`,
+        body: `{{GREETING}}\n\npiszę z HardbanRecords Lab. Słuchając ${partner.name}, pomyślałem, że te utwory mogą do Was pasować:\n\n${list}\n\nOdsłuch: ${link}\n\nJeśli coś się spodoba, chętnie prześlę pliki w pełnej jakości i informacje o artyście.\n\nPozdrawiam,\nKamil Skomra\nHardbanRecords Lab` }
+    : { subject: `Music for ${partner.name} — ${tracks.length === 1 ? tracks[0].title : "picks from HardbanRecords Lab"}`,
+        body: `{{GREETING}}\n\nI'm reaching out from HardbanRecords Lab. Listening to ${partner.name}, I think these could be a good fit:\n\n${list}\n\nListen here: ${link}\n\nIf anything works for you, I'm happy to send full-quality files and artist info.\n\nBest,\nKamil Skomra\nHardbanRecords Lab` };
+}
+
+router.post("/pitch", async (req, res) => {
+  const b = req.body || {};
+  const partner = await queryOne("SELECT * FROM promo_partners WHERE id = $1", [b.partner_id]);
+  const ids = (Array.isArray(b.track_ids) ? b.track_ids : []).map((x) => parseInt(x, 10)).filter(Boolean).slice(0, 10);
+  if (!partner || !ids.length) return res.status(400).json({ error: "Choose a partner and 1–10 tracks" });
+  const tracks = [];
+  for (const id of ids) {
+    const t = await queryOne("SELECT id, title, artist, genre, bpm, mood, metadata FROM tracks WHERE id = $1", [id]);
+    if (t) tracks.push(t);
+  }
+  if (!tracks.length) return res.status(400).json({ error: "Tracks not found" });
+
+  // Share link — reuses playlists + shareable_links, so opens and plays show up in Analytics.
+  const pl = await queryOne(
+    "INSERT INTO playlists (user_id, name, description) VALUES ($1, $2, $3) RETURNING id",
+    [req.userId, `Pitch — ${partner.name} — ${new Date().toISOString().slice(0, 10)}`.slice(0, 200), `Promotion pitch for ${partner.name}`]
+  );
+  for (const [i, t] of tracks.entries()) {
+    await query("INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES ($1, $2, $3)", [pl.id, t.id, i + 1]);
+  }
+  const token = crypto.randomBytes(16).toString("hex");
+  await query("INSERT INTO shareable_links (playlist_id, link_token, allow_downloads, require_email) VALUES ($1, $2, false, false)", [pl.id, token]);
+  const shareUrl = `${(process.env.FRONTEND_URL || "https://hrl-sync.hub.hardbanrecordslab.online").replace(/\/$/, "")}/share/${token}`;
+
+  const polish = PL_COUNTRIES.includes((partner.country || "").trim().toLowerCase()) || b.language === "pl";
+  let draft = null;
+  if (aiService.available) {
+    const describe = tracks.map((t) => {
+      const mood = t.mood && typeof t.mood === "object" && !Array.isArray(t.mood) ? t.mood : {};
+      const meta = t.metadata || {};
+      return `- "${t.title}" — ${t.genre || "n/a"}, ${t.bpm || "?"} BPM; moods: ${(mood.tags || []).join(", ") || "n/a"}; vibe: ${mood.vibe || "n/a"}; fits: ${(meta.useCases || []).slice(0, 2).join("; ") || "n/a"}`;
+    }).join("\n");
+    const prompt =
+      `Write a short, warm, non-pushy pitch e-mail ${polish ? "in Polish" : "in English"} from Kamil Skomra (HardbanRecords Lab, independent label) ` +
+      `to the curator of "${partner.name}" (${KINDS[partner.kind] || partner.kind}; plays: ${(partner.genres || []).join(", ") || "various"}; reach: ${partner.audience || "n/a"}).\n` +
+      `Tracks:\n${describe}\n\n` +
+      `Rules: max 140 words in the body; say briefly why these tracks fit THIS outlet; no invented facts (no streams, awards, press, ` +
+      `release dates); start the body with the exact placeholder {{GREETING}} on its own line; put the exact placeholder {{LINK}} where the ` +
+      `listening link goes; sign off as Kamil Skomra, HardbanRecords Lab. Reply ONLY with JSON: {"subject": "...", "body": "..."}`;
+    try {
+      const raw = await aiService.chat(prompt, "You are an experienced music PR who writes concise, personal pitches to playlist curators and radio editors.", 0.6);
+      const json = JSON.parse((raw.match(/\{[\s\S]*\}/) || [raw])[0]);
+      if (json.subject && json.body && json.body.includes("{{LINK}}")) draft = { subject: String(json.subject).slice(0, 200), body: String(json.body).slice(0, 4000) };
+    } catch (e) {
+      logger.warn(`pitch draft AI failed: ${e.message}`);
+    }
+  }
+  const out = draft || fallbackPitch(polish, partner, tracks, "{{LINK}}");
+  const greeting = partner.contact_name ? (polish ? `Dzień dobry ${partner.contact_name},` : `Hi ${partner.contact_name},`) : (polish ? "Dzień dobry," : "Hi,");
+  res.json({
+    subject: out.subject,
+    body: out.body.replace("{{GREETING}}", greeting).split("{{LINK}}").join(shareUrl),
+    share_url: shareUrl,
+    playlist_id: pl.id,
+    ai: !!draft,
+    to: partner.contact_email || null,
+  });
+});
+
 module.exports = { router, publicRouter, KINDS };

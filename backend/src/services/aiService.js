@@ -63,7 +63,7 @@ class AIService {
     return !!process.env.OPENROUTER_API_KEY;
   }
 
-  async chat(prompt, system = "You are a music supervisor and metadata expert for a sync-licensing library.") {
+  async chat(prompt, system = "You are a music supervisor and metadata expert for a sync-licensing library.", temperature = 0.3) {
     if (!process.env.OPENROUTER_API_KEY) {
       const err = new Error("AI_NOT_CONFIGURED");
       err.status = 503;
@@ -75,7 +75,9 @@ class AIService {
         { role: "system", content: system },
         { role: "user", content: prompt },
       ],
-      temperature: 0.3,
+      temperature,
+      // Same rule as DROPIFY / MasteringPro: only providers that neither store nor train on prompts.
+      provider: { data_collection: "deny" },
     };
 
     let lastErr;
