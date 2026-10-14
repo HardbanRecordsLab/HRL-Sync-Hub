@@ -583,6 +583,14 @@ async function check(name, fn) {
     assert(st.body.edit_urls && st.body.edit_urls["60"].endsWith("edit=60"));
   });
 
+  await check("promo video renders a vertical MP4 for the team; anonymous → 401", async () => {
+    assert.strictEqual((await request(app).get(`/api/tracks/${licTrackId}/promo-video`)).status, 401);
+    const r = await request(app).get(`/api/tracks/${licTrackId}/promo-video?token=${adminToken}`).buffer(true).parse(binary);
+    assert.strictEqual(r.status, 200, `got ${r.status} ${r.body}`);
+    assert.strictEqual(r.headers["content-type"], "video/mp4");
+    assert.strictEqual(r.body.slice(4, 8).toString(), "ftyp", "MP4 container");
+  });
+
   await check("certificate is a real PDF", async () => {
     const r = await request(app).get(`/api/licenses/certificate/${paidOrder.download_token}`).buffer(true)
       .parse((res, cb) => { const c = []; res.on("data", (d) => c.push(d)); res.on("end", () => cb(null, Buffer.concat(c))); });

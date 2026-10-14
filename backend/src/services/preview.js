@@ -188,4 +188,71 @@ async function ensureEdit(track, seconds) {
   return inflight.get(flightKey);
 }
 
-module.exports = { ensurePreview, backfill, previewKey, VERSION, ensureEdit, EDIT_LENGTHS };
+
+// ── Promo video for socials (TikTok / Reels / Shorts) ─────────────────────────
+// 1080×1920, 20 s from the strongest part (30 s in, or the start for short tracks): animated waveform,
+// title, artist and a licensing line. Clean audio — it is our own promotion. Cached as `promo-v1-<hash>.mp4`.
+const FONT_BOLD = path.join(__dirname, "../assets/fonts/DejaVuSans-Bold.ttf");
+const FONT = path.join(__dirname, "../assets/fonts/DejaVuSans.ttf");
+
+function promoKey(objectKey) {
+  return `promo-v1-${path.basename(objectKey).replace(/\.[^.]+$/, "")}.mp4`;
+}
+
+function runPromo(input, output, textDir, startAt) {
+  // Text goes through textfile= so titles with quotes/colons never break the filtergraph.
+  const esc = (p) => p.replace(/\\/g, "/").replace(/:/g, "\\:");
+  const filter =
+    `color=c=0x0B0B12:s=1080x1920:r=30[bg];` +
+    `[0:a]aformat=channel_layouts=mono,volume=2.5,showwaves=s=1000x560:mode=cline:rate=30:colors=0xA78BFA:scale=cbrt:draw=full,format=rgba[w];` +
+    `[bg][w]overlay=40:740:format=auto[v1];` +
+    `[v1]drawtext=fontfile='${esc(FONT_BOLD)}':textfile='${esc(path.join(textDir, "title.txt"))}':fontsize=70:fontcolor=white:x=(w-text_w)/2:y=470,` +
+    `drawtext=fontfile='${esc(FONT)}':textfile='${esc(path.join(textDir, "artist.txt"))}':fontsize=44:fontcolor=0xC4B5FD:x=(w-text_w)/2:y=580,` +
+    `drawtext=fontfile='${esc(FONT_BOLD)}':textfile='${esc(path.join(textDir, "cta.txt"))}':fontsize=46:fontcolor=white:x=(w-text_w)/2:y=1480,` +
+    `drawtext=fontfile='${esc(FONT)}':text='hrl-sync.hub.hardbanrecordslab.online':fontsize=32:fontcolor=0xC4B5FD:x=(w-text_w)/2:y=1560[v]`;
+  return new Promise((resolve, reject) => {
+    const args = [
+      "-hide_banner", "-loglevel", "error", "-y", "-ss", String(startAt), "-t", "20", "-i", input,
+      "-filter_complex", filter, "-map", "[v]", "-map", "0:a",
+      "-af", "afade=t=in:d=1,afade=t=out:st=18.5:d=1.5",
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+      "-c:a", "aac", "-b:a", "160k", "-shortest", output,
+    ];
+    const p = spawn(FFMPEG, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let err = "";
+    p.stderr.on("data", (d) => { err += d.toString().slice(0, 2000); });
+    p.on("error", reject);
+    p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}: ${err.trim().slice(0, 400)}`))));
+  });
+}
+
+async function ensurePromoVideo(track) {
+  if (!track?.object_key) return null;
+  const key = promoKey(track.object_key);
+  if (await objectStore.head(key)) return key;
+  const flightKey = `promo:${track.id}`;
+  if (!inflight.has(flightKey)) {
+    inflight.set(flightKey, (async () => {
+      const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "hrl-promo-"));
+      const src = path.join(tmp, "src" + (path.extname(track.object_key) || ".audio"));
+      const out = path.join(tmp, "promo.mp4");
+      await fs.promises.writeFile(path.join(tmp, "title.txt"), String(track.title || "").slice(0, 40));
+      await fs.promises.writeFile(path.join(tmp, "artist.txt"), String(track.artist || "").slice(0, 40));
+      await fs.promises.writeFile(path.join(tmp, "cta.txt"), "License this track for your video");
+      await slot();
+      try {
+        await pipeline(await objectStore.getStream(path.basename(track.object_key)), fs.createWriteStream(src));
+        const seconds = (track.duration_ms || 0) / 1000;
+        await runPromo(src, out, tmp, seconds >= 55 ? 30 : 0);
+        await objectStore.putFile(key, out, "video/mp4");
+        return key;
+      } finally {
+        release();
+        fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => {});
+      }
+    })().finally(() => inflight.delete(flightKey)));
+  }
+  return inflight.get(flightKey);
+}
+
+module.exports = { ensurePreview, backfill, previewKey, VERSION, ensureEdit, EDIT_LENGTHS, ensurePromoVideo, _runPromo: runPromo };

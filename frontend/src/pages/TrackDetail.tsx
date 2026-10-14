@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit2, Loader2, Pause, Play, Plus, Save, Sparkles, Tag, X } from "lucide-react";
+import { ArrowLeft, Edit2, Film, Loader2, Pause, Play, Plus, Save, Sparkles, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Layout from "@/components/Layout";
-import { api, streamUrl } from "@/lib/api";
+import { api, authedUrl, streamUrl } from "@/lib/api";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -204,6 +204,13 @@ export default function TrackDetail() {
               title="Write the catalogue metadata into the audio file's ID3 tags (Metadata Engine)">
               {tagMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Tag className="w-4 h-4 mr-1.5" />}Tag file
             </Button>
+            {playable && !E && (
+              <a href={authedUrl(`/api/tracks/${track.id}/promo-video`)} onClick={() => toast("Rendering the promo video — the first time takes about 15 seconds.")}
+                className="inline-flex items-center h-9 px-3 rounded-md border border-border text-sm hover:bg-white/5"
+                title="20-second vertical video (1080×1920) with waveform and title for TikTok, Reels and Shorts">
+                <Film className="w-4 h-4 mr-1.5" />Promo video
+              </a>
+            )}
           </div>
         </div>
 

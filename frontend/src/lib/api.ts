@@ -103,6 +103,11 @@ export function streamUrl(trackId: string) {
   return `${BASE}/api/tracks/stream/${trackId}?token=${encodeURIComponent(token)}`;
 }
 
+/** Authenticated download link (JWT as ?token=, like streaming) for plain <a href> downloads. */
+export function authedUrl(path: string) {
+  return `${BASE}${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(getToken() ?? "")}`;
+}
+
 /** Stream URL for a shared playlist (no login — uses the share token). */
 export function sharedStreamUrl(trackId: string, shareToken: string) {
   return `${BASE}/api/tracks/stream/${trackId}?shareToken=${encodeURIComponent(shareToken)}`;

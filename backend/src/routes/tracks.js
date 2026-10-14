@@ -467,6 +467,29 @@ function moodObject(m) {
   return { tags: [] };
 }
 
+// ── GET /api/tracks/:id/promo-video — vertical MP4 for socials (team only) ─────
+router.get("/:id/promo-video", async (req, res) => {
+  const track = await queryOne("SELECT id, title, artist, object_key, duration_ms FROM tracks WHERE id=$1", [req.params.id]);
+  if (!track?.object_key) return res.status(404).json({ error: "Track has no audio file" });
+  let key;
+  try {
+    key = await preview.ensurePromoVideo(track);
+  } catch (e) {
+    logger.error(`promo video ${track.id}: ${e.message}`);
+    return res.status(502).json({ error: "Could not render the video" });
+  }
+  const meta = await objectStore.head(key);
+  if (!meta) return res.status(404).json({ error: "Video missing" });
+  const name = `${track.artist} - ${track.title} (promo).mp4`.replace(/[\\/:*?"<>|]/g, "");
+  res.writeHead(200, {
+    "Content-Type": "video/mp4",
+    "Content-Length": meta.size,
+    "Content-Disposition": `attachment; filename="${name.normalize("NFKD").replace(/[^\x20-\x7E]/g, "")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "Cache-Control": "private, no-store",
+  });
+  (await objectStore.getStream(key)).pipe(res);
+});
+
 // ── GET /api/tracks/:id ────────────────────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   const track = await queryOne(
