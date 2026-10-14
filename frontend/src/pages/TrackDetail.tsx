@@ -289,7 +289,6 @@ export default function TrackDetail() {
                   {similar.map((s: any) => (
                     <button key={s.id} onClick={() => navigate(`/library/${s.id}`)} className="w-full flex items-center justify-between gap-2 text-sm text-left hover:text-violet-300">
                       <span className="truncate">{s.title}<span className="text-muted-foreground"> · {s.genre}</span></span>
-                      <span className="text-xs text-muted-foreground shrink-0">{s.similarity}%</span>
                     </button>
                   ))}
                 </div>

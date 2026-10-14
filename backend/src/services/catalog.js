@@ -35,28 +35,58 @@ async function publicCatalog() {
   return cache.rows;
 }
 
-function tagSet(t) {
+// Weighted features: genre words and moods count most, instruments least; rare tags (IDF) beat common ones —
+// the catalogue is dominated by neo-soul, so plain overlap ranks everything alike.
+const WEIGHTS = { w: 2.0, m: 1.5, g: 1.5, k: 1.0, i: 0.5 };
+
+function rawFeatures(t) {
   const words = (t.genre || "").toLowerCase().split(/[\s/-]+/).filter((w) => w.length > 2);
-  return new Set([...t.moods.map((m) => `m:${m}`), ...t.keywords.map((k) => `k:${k}`), ...t.genres.map((g) => `g:${g}`),
-    ...t.instruments.map((i) => `i:${i}`), ...words.map((w) => `w:${w}`)]);
+  const f = new Map();
+  const add = (type, xs) => xs.forEach((x) => f.set(`${type}:${x}`, WEIGHTS[type]));
+  add("m", t.moods); add("k", t.keywords); add("g", t.genres); add("i", t.instruments); add("w", words);
+  return f;
 }
 
-/** Similarity: tag overlap (Jaccard) + tempo closeness + same energy / vocals. */
+function vectors(rows) {
+  const df = new Map();
+  const raw = rows.map(rawFeatures);
+  raw.forEach((f) => f.forEach((_, k) => df.set(k, (df.get(k) || 0) + 1)));
+  const n = rows.length;
+  return raw.map((f) => {
+    const v = new Map();
+    let norm = 0;
+    f.forEach((w, k) => {
+      const x = w * Math.log(1 + n / (1 + (df.get(k) || 0)));
+      v.set(k, x);
+      norm += x * x;
+    });
+    return { v, norm: Math.sqrt(norm) || 1 };
+  });
+}
+
+/** Similarity: TF-IDF cosine over tags + tempo closeness + same energy / vocals. */
 function similar(rows, id, limit = 12) {
-  const base = rows.find((r) => String(r.id) === String(id));
-  if (!base) return null;
-  const a = tagSet(base);
+  const idx = rows.findIndex((r) => String(r.id) === String(id));
+  if (idx < 0) return null;
+  if (cache.vectorsFor !== rows) {
+    cache.vectors = vectors(rows);
+    cache.vectorsFor = rows;
+  }
+  const vs = cache.vectors;
+  const base = rows[idx];
+  const a = vs[idx];
   return rows
-    .filter((r) => r.id !== base.id)
-    .map((r) => {
-      const b = tagSet(r);
-      let inter = 0;
-      for (const x of a) if (b.has(x)) inter++;
-      const jac = inter / (a.size + b.size - inter || 1);
-      const tempo = base.bpm && r.bpm ? Math.max(0, 1 - Math.abs(base.bpm - r.bpm) / 40) : 0.3;
-      const score = jac * 0.7 + tempo * 0.2 + (base.energy && base.energy === r.energy ? 0.05 : 0) + (base.vocals === r.vocals ? 0.05 : 0);
+    .map((r, i) => {
+      if (i === idx) return null;
+      const b = vs[i];
+      let dot = 0;
+      a.v.forEach((x, k) => { const y = b.v.get(k); if (y) dot += x * y; });
+      const cos = dot / (a.norm * b.norm);
+      const tempo = base.bpm && r.bpm ? Math.max(0, 1 - Math.abs(base.bpm - r.bpm) / 30) : 0;
+      const score = 0.8 * cos + 0.12 * tempo + (base.energy && base.energy === r.energy ? 0.04 : 0) + (base.vocals === r.vocals ? 0.04 : 0);
       return { r, score };
     })
+    .filter(Boolean)
     .sort((x, y) => y.score - x.score)
     .slice(0, limit)
     .map(({ r, score }) => ({ ...r, similarity: Math.round(score * 100) }));

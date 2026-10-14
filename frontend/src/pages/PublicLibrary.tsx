@@ -196,7 +196,7 @@ export default function PublicLibrary() {
                   </span>
                   <span className="min-w-0 space-y-1">
                     <span className={cn("block text-sm font-medium truncate", active && "text-violet-300")}>
-                      {t.title}{t.similarity != null && <span className="ml-2 text-xs text-muted-foreground font-normal">{t.similarity}% match</span>}
+                      {t.title}
                     </span>
                     <span className="block text-xs text-muted-foreground truncate">
                       {[t.genre, t.bpm && `${t.bpm} BPM`, t.key, t.vocals === false ? "instrumental" : t.vocal_gender && `${t.vocal_gender} vocal`, fmt(t.duration)].filter(Boolean).join(" · ")}
