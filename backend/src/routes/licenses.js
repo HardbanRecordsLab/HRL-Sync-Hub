@@ -7,6 +7,7 @@ const { query, queryOne, queryAll } = require("../db/pool");
 const authMiddleware = require("../middleware/auth");
 const { requireAdmin } = require("../middleware/auth");
 const objectStore = require("../services/storage");
+const preview = require("../services/preview");
 const emailService = require("../services/emailService");
 const stripe = require("../services/stripe");
 const { buildCertificate, TERMS_VERSION, TERMS_URL } = require("../services/licensePdf");
@@ -39,6 +40,7 @@ function publicOrder(o) {
   };
   if (o.status === "paid" && o.download_token) {
     out.download_url = `${base}/api/licenses/download/${o.download_token}`;
+    out.edit_urls = Object.fromEntries(preview.EDIT_LENGTHS.map((s) => [s, `${base}/api/licenses/download/${o.download_token}?edit=${s}`]));
     out.certificate_url = `${base}/api/licenses/certificate/${o.download_token}`;
     out.verify_url = `${base}/license/verify/${o.number}`;
   }
@@ -147,7 +149,8 @@ async function fulfil(orderId) {
       text:
         `Hi ${order.buyer_name},\n\nthank you for licensing "${order.track_title}" (${order.track_artist}) for "${order.project_title}".\n\n` +
         `Licence no.: ${order.number}\nTier: ${order.tier_name} (${money(order.price_grosze)})\n\n` +
-        `Download the full-quality file (link valid ${DOWNLOAD_DAYS} days):\n${links.download_url}\n\n` +
+        `Download the full-quality file (link valid ${DOWNLOAD_DAYS} days):\n${links.download_url}\n` +
+        `Ready-made edits — 30 s: ${links.edit_urls[30]}\n60 s: ${links.edit_urls[60]}\n\n` +
         `Your licence certificate is attached (also here: ${links.certificate_url}).\n` +
         `Verification page: ${verifyUrl}\nTerms: ${TERMS_URL}\n\n` +
         `You agreed to immediate delivery of digital content and acknowledged the loss of the right of withdrawal (art. 38(1)(13) of the Polish Consumer Rights Act).\n\n` +
@@ -207,17 +210,31 @@ router.get("/download/:token", async (req, res) => {
   if (ageDays > DOWNLOAD_DAYS || order.download_count >= MAX_DOWNLOADS) {
     return res.status(410).json({ error: "This download link has expired. Write to licensing@hardbanrecordslab.online and we will send the file again." });
   }
-  const track = await queryOne("SELECT object_key, mime_type, filename FROM tracks WHERE id = $1", [order.track_id]);
+  const track = await queryOne("SELECT id, object_key, mime_type, filename FROM tracks WHERE id = $1", [order.track_id]);
   if (!track?.object_key) return res.status(404).json({ error: "File not available" });
-  const key = path.basename(track.object_key);
+  let key = path.basename(track.object_key);
+  let mime = track.mime_type || "audio/mpeg";
+  let suffix = "";
+  if (req.query.edit !== undefined) {
+    const edit = parseInt(req.query.edit, 10);
+    if (!preview.EDIT_LENGTHS.includes(edit)) return res.status(400).json({ error: "Available edits: 30, 60 seconds" });
+    try {
+      key = await preview.ensureEdit(track, edit);
+    } catch (e) {
+      logger.error(`licence ${order.number} edit ${edit}s: ${e.message}`);
+      return res.status(503).json({ error: "The short version is being prepared — try again in a minute." });
+    }
+    mime = "audio/mpeg";
+    suffix = ` - ${edit}s edit`;
+  }
   const meta = await objectStore.head(key);
   if (!meta) return res.status(404).json({ error: "File not available" });
   await query("UPDATE license_orders SET download_count = download_count + 1 WHERE id = $1", [order.id]);
-  const ext = path.extname(track.filename || key) || ".mp3";
-  const name = `${order.track_artist} - ${order.track_title} (${order.number})${ext}`.replace(/[\\/:*?"<>|]/g, "");
+  const ext = suffix ? ".mp3" : path.extname(track.filename || key) || ".mp3";
+  const name = `${order.track_artist} - ${order.track_title}${suffix} (${order.number})${ext}`.replace(/[\\/:*?"<>|]/g, "");
   const ascii = name.normalize("NFKD").replace(/[^\x20-\x7E]/g, "");
   res.writeHead(200, {
-    "Content-Type": track.mime_type || "audio/mpeg",
+    "Content-Type": mime,
     "Content-Length": meta.size,
     "Content-Disposition": `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`,
     "Cache-Control": "private, no-store",

@@ -559,6 +559,16 @@ async function check(name, fn) {
     assert.strictEqual(bad.status, 404);
   });
 
+  await check("licence includes clean 30 s / 60 s edits; other lengths rejected", async () => {
+    const r = await request(app).get(`/api/licenses/download/${paidOrder.download_token}?edit=30`).buffer(true).parse(binary);
+    assert.strictEqual(r.status, 200, `got ${r.status} ${r.body}`);
+    assert.strictEqual(r.headers["content-type"], "audio/mpeg");
+    assert(r.headers["content-disposition"].includes("30s edit"), r.headers["content-disposition"]);
+    assert.strictEqual((await request(app).get(`/api/licenses/download/${paidOrder.download_token}?edit=15`)).status, 400);
+    const st = await request(app).get(`/api/licenses/session/${paidOrder.stripe_session_id}`);
+    assert(st.body.edit_urls && st.body.edit_urls["60"].endsWith("edit=60"));
+  });
+
   await check("certificate is a real PDF", async () => {
     const r = await request(app).get(`/api/licenses/certificate/${paidOrder.download_token}`).buffer(true)
       .parse((res, cb) => { const c = []; res.on("data", (d) => c.push(d)); res.on("end", () => cb(null, Buffer.concat(c))); });

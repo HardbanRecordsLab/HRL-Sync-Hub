@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 
 type OrderStatus = {
   number: string | null; status: string; track_title: string; track_artist: string; tier_name: string; price: number;
-  project_title: string; download_url?: string; certificate_url?: string; verify_url?: string;
+  project_title: string; download_url?: string; certificate_url?: string; verify_url?: string; edit_urls?: Record<string, string>;
 };
 type Verification = {
   valid: boolean; number: string; track_title: string; track_artist: string; tier_name: string; project_title: string;
@@ -90,6 +90,9 @@ export function LicenseSuccess() {
           </dl>
           <div className="flex flex-wrap gap-3">
             <a href={order.download_url} className="hrl-btn-primary inline-flex items-center gap-2 px-4 py-2.5"><Download className="w-4 h-4" /> Download the track</a>
+            {order.edit_urls && Object.entries(order.edit_urls).map(([sec, url]) => (
+              <a key={sec} href={url} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-white/5 text-sm"><Download className="w-4 h-4" /> {sec} s edit</a>
+            ))}
             <a href={order.certificate_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-white/5 text-sm"><FileText className="w-4 h-4" /> Licence certificate (PDF)</a>
           </div>
           <p className="text-xs text-muted-foreground">The download link works for 30 days. If a platform such as YouTube raises a claim on your video, send the licence number to licensing@hardbanrecordslab.online.</p>

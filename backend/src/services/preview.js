@@ -139,4 +139,53 @@ async function backfill() {
   logger.info(`Preview backfill finished: ${ok}/${todo.length}`);
 }
 
-module.exports = { ensurePreview, backfill, previewKey, VERSION };
+// ── Licensed cut-downs (30 s / 60 s) ─────────────────────────────────────────
+// Clean (no watermark), 320 kbps MP3, leading silence trimmed, 2 s fade-out. Built on first download and kept
+// in the bucket as `edit-v1-<content-hash>-<seconds>.mp3`.
+const EDIT_LENGTHS = [30, 60];
+
+function editKey(objectKey, seconds) {
+  return `edit-v1-${path.basename(objectKey).replace(/\.[^.]+$/, "")}-${seconds}.mp3`;
+}
+
+function runEdit(input, output, seconds) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      "-hide_banner", "-loglevel", "error", "-y", "-i", input,
+      "-af", `silenceremove=start_periods=1:start_threshold=-50dB,atrim=0:${seconds},afade=t=out:st=${seconds - 2}:d=2`,
+      "-map_metadata", "0", "-c:a", "libmp3lame", "-b:a", "320k", output,
+    ];
+    const p = spawn(FFMPEG, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let err = "";
+    p.stderr.on("data", (d) => { err += d.toString().slice(0, 2000); });
+    p.on("error", reject);
+    p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}: ${err.trim().slice(0, 300)}`))));
+  });
+}
+
+async function ensureEdit(track, seconds) {
+  if (!EDIT_LENGTHS.includes(seconds) || !track?.object_key) return null;
+  const key = editKey(track.object_key, seconds);
+  if (await objectStore.head(key)) return key;
+  const flightKey = `${track.id}:${seconds}`;
+  if (!inflight.has(flightKey)) {
+    inflight.set(flightKey, (async () => {
+      const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "hrl-edit-"));
+      const src = path.join(tmp, "src" + (path.extname(track.object_key) || ".audio"));
+      const out = path.join(tmp, "edit.mp3");
+      await slot();
+      try {
+        await pipeline(await objectStore.getStream(path.basename(track.object_key)), fs.createWriteStream(src));
+        await runEdit(src, out, seconds);
+        await objectStore.putFile(key, out, "audio/mpeg");
+        return key;
+      } finally {
+        release();
+        fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => {});
+      }
+    })().finally(() => inflight.delete(flightKey)));
+  }
+  return inflight.get(flightKey);
+}
+
+module.exports = { ensurePreview, backfill, previewKey, VERSION, ensureEdit, EDIT_LENGTHS };
