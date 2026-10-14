@@ -25,6 +25,8 @@ const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Licenses = lazy(() => import("./pages/Licenses"));
+const Promotion = lazy(() => import("./pages/Promotion"));
+const PartnerApply = lazy(() => import("./pages/PartnerApply"));
 const LicenseSuccess = lazy(() => import("./pages/LicensePages").then((m) => ({ default: m.LicenseSuccess })));
 const LicenseVerify = lazy(() => import("./pages/LicensePages").then((m) => ({ default: m.LicenseVerify })));
 
@@ -60,6 +62,7 @@ function AppRoutes() {
         <Route path="/share/:token" element={<SharedPlaylist />} />
         <Route path="/public-library" element={<PublicLibrary />} />
         <Route path="/license/success" element={<LicenseSuccess />} />
+        <Route path="/partners" element={<PartnerApply />} />
         <Route path="/license/verify/:number" element={<LicenseVerify />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
@@ -74,6 +77,7 @@ function AppRoutes() {
         <Route path="/projects" element={<Protected><Projects /></Protected>} />
         <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
         <Route path="/sales" element={<Protected><Licenses /></Protected>} />
+        <Route path="/promotion" element={<Protected><Promotion /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
 
         <Route path="*" element={<NotFound />} />

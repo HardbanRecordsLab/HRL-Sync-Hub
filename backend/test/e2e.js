@@ -378,6 +378,55 @@ async function check(name, fn) {
     assert.strictEqual(t.mood.vibe, "Night drive");
   });
 
+
+  // ── Promotion partners ────────────────────────────────────────────────────
+  let partnerId;
+  await check("promo: team only; starter list seeds once", async () => {
+    assert.strictEqual((await request(app).get("/api/promo")).status, 401);
+    const h = { Authorization: `Bearer ${adminToken}` };
+    const a = await request(app).post("/api/promo/seed").set(h);
+    assert.strictEqual(a.status, 200, JSON.stringify(a.body));
+    assert(a.body.added >= 10, `added ${a.body.added}`);
+    assert.strictEqual((await request(app).post("/api/promo/seed").set(h)).body.added, 0, "idempotent");
+    const r = await request(app).get("/api/promo").set(h);
+    assert(r.body.partners.every((p) => p.status === "prospect" && p.source === "seed"));
+  });
+
+  await check("promo: add partner, log a submission, success promotes the partner", async () => {
+    const h = { Authorization: `Bearer ${adminToken}` };
+    const p = await request(app).post("/api/promo/partners").set(h).send({
+      name: "Late Night Neo-Soul", kind: "spotify_playlist", genres: "neo-soul, jazz", audience: "18k followers",
+      url: "https://open.spotify.com/playlist/x", cooperation: "free", contact_email: "curator@example.com" });
+    assert.strictEqual(p.status, 201, JSON.stringify(p.body));
+    partnerId = p.body.id;
+    assert.deepStrictEqual(p.body.genres, ["neo-soul", "jazz"]);
+    const s = await request(app).post("/api/promo/submissions").set(h).send({ partner_id: partnerId, track_id: metaTrackId });
+    assert.strictEqual(s.status, 201, JSON.stringify(s.body));
+    let list = (await request(app).get("/api/promo").set(h)).body;
+    assert.strictEqual(list.partners.find((x) => x.id === partnerId).status, "contacted");
+    await request(app).patch(`/api/promo/submissions/${s.body.id}`).set(h).send({ status: "played", result_url: "https://open.spotify.com/playlist/x" });
+    list = (await request(app).get("/api/promo").set(h)).body;
+    const me = list.partners.find((x) => x.id === partnerId);
+    assert.strictEqual(me.status, "partner");
+    assert.strictEqual(me.wins, 1);
+  });
+
+  await check("promo: public application form → accept creates a partner", async () => {
+    const bad = await request(app).post("/api/promo/public/apply").send({ name: "Radio X", url: "radio.example", contact_name: "Ola", contact_email: "ola@radio.example", consent: true });
+    assert.strictEqual(bad.status, 400, "link must be https");
+    const r = await request(app).post("/api/promo/public/apply").send({
+      name: "Radio X", kind: "radio_online", url: "https://radio.example", contact_name: "Ola", contact_email: "ola@radio.example",
+      genres: ["soul"], audience: "5k daily listeners", consent: true });
+    assert.strictEqual(r.status, 201, JSON.stringify(r.body));
+    const h = { Authorization: `Bearer ${adminToken}` };
+    const app1 = (await request(app).get("/api/promo").set(h)).body.applications[0];
+    assert.strictEqual(app1.name, "Radio X");
+    await request(app).post(`/api/promo/applications/${app1.id}/accept`).set(h);
+    const after = (await request(app).get("/api/promo").set(h)).body;
+    assert.strictEqual(after.applications.length, 0);
+    assert(after.partners.some((p) => p.name === "Radio X" && p.source === "application"));
+  });
+
   // ── Sync licence shop ─────────────────────────────────────────────────────
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
   let licTrackId, paidOrder;

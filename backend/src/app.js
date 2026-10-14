@@ -129,6 +129,9 @@ app.get(["/health", "/api/health"], async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/licenses/admin", licenses.admin); // auth inside
 app.use("/api/licenses", licenses.router);       // public shop endpoints
+const promo = require("./routes/promo");
+app.use("/api/promo/public", promo.publicRouter); // partner application form (no login)
+app.use("/api/promo", promo.router);               // team: partners, submissions, applications
 app.use("/api/business", businessRoutes);
 
 // /stream/:id and /public are reachable without a login (the route checks the

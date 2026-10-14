@@ -356,3 +356,58 @@ CREATE TABLE IF NOT EXISTS track_previews (
   version     TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ─── Promotion partners: playlists, radios, curators, blogs (2026-10-14) ───
+CREATE TABLE IF NOT EXISTS promo_partners (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name           TEXT NOT NULL,
+  kind           TEXT NOT NULL DEFAULT 'other',      -- see routes/promo.js KINDS
+  country        TEXT,
+  genres         JSONB NOT NULL DEFAULT '[]',
+  audience       TEXT,                               -- e.g. "12k followers", "regional FM"
+  url            TEXT,
+  submission_url TEXT,
+  contact_name   TEXT,
+  contact_email  TEXT,
+  cooperation    TEXT NOT NULL DEFAULT 'unknown',    -- free | paid | exchange | partnership | unknown
+  price_note     TEXT,
+  status         TEXT NOT NULL DEFAULT 'prospect',   -- prospect | contacted | partner | declined
+  notes          TEXT,
+  source         TEXT NOT NULL DEFAULT 'manual',     -- manual | application | seed
+  created_by     UUID,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_promo_partners_kind ON promo_partners(kind);
+
+CREATE TABLE IF NOT EXISTS promo_submissions (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id  UUID NOT NULL REFERENCES promo_partners(id) ON DELETE CASCADE,
+  track_id    INTEGER NOT NULL,
+  track_title TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'sent',          -- planned | sent | accepted | played | declined | no_reply
+  sent_at     DATE,
+  result_url  TEXT,
+  notes       TEXT,
+  created_by  UUID,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_promo_submissions_partner ON promo_submissions(partner_id);
+
+-- Public "play our music / list us as a partner" applications.
+CREATE TABLE IF NOT EXISTS promo_applications (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          TEXT NOT NULL,
+  kind          TEXT NOT NULL,
+  url           TEXT NOT NULL,
+  country       TEXT,
+  genres        JSONB NOT NULL DEFAULT '[]',
+  audience      TEXT,
+  contact_name  TEXT NOT NULL,
+  contact_email TEXT NOT NULL,
+  message       TEXT,
+  status        TEXT NOT NULL DEFAULT 'new',         -- new | accepted | rejected
+  ip_address    TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
