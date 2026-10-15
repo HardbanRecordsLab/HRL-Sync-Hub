@@ -289,7 +289,7 @@ router.get("/", async (req, res) => {
     params.push(`%${search}%`);
     where += ` AND (t.title ILIKE $${params.length} OR t.artist ILIKE $${params.length} OR t.composer ILIKE $${params.length})`;
   }
-  if (clearance) { params.push(clearance); where += ` AND t.clearance_status = $${params.length}::clearance_status`; }
+  if (clearance) { params.push(clearance); where += ` AND t.clearance_status = $${params.length}::text`; }  // the CMLP foreign table exposes it as text
   if (key) { params.push(key); where += ` AND t.musical_key = $${params.length}`; }
   if (bpm_min) { params.push(bpm_min); where += ` AND t.bpm >= $${params.length}`; }
   if (bpm_max) { params.push(bpm_max); where += ` AND t.bpm <= $${params.length}`; }
