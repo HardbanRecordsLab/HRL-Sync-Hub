@@ -124,7 +124,8 @@ export default function PublicLibrary() {
             <p className="text-sm font-semibold leading-tight">HRL Sync Hub</p>
             <p className="text-xs text-muted-foreground leading-tight">Hardban Records Lab</p>
           </div>
-          <a href="https://hardbanrecordslab.online/sync-hub/" className="ml-auto text-sm text-muted-foreground hover:text-foreground">Licensing enquiries</a>
+          <a href="https://hardbanrecordslab.online/" className="ml-auto text-sm text-muted-foreground hover:text-foreground">← Main website</a>
+          <a href="https://hardbanrecordslab.online/sync-hub/" className="text-sm text-muted-foreground hover:text-foreground">Licensing enquiries</a>
         </div>
       </header>
 

@@ -74,6 +74,9 @@ export default function AuthPage() {
         <p className="text-xs text-muted-foreground text-center mt-6">
           Accounts are created by an administrator. Looking for music? <a href="/public-library" className="text-violet-300 hover:text-violet-200">Browse the public catalog</a>.
         </p>
+        <p className="text-xs text-muted-foreground text-center mt-3">
+          <a href="https://hardbanrecordslab.online/" className="hover:text-foreground">← Back to hardbanrecordslab.online</a>
+        </p>
       </div>
     </div>
   );

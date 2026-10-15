@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Library, FileText, Radio, Users,
   Kanban, BarChart3, Settings, LogOut,
-  ChevronLeft, ChevronRight, Menu, X, ShoppingBag, Megaphone,
+  ChevronLeft, ChevronRight, Menu, X, ShoppingBag, Megaphone, Home,
 } from "lucide-react";
 import { toast } from "sonner";
 import GlobalSearch from "./GlobalSearch";
@@ -103,6 +103,14 @@ export default function Layout({ children }: LayoutProps) {
         >
           {compact ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Collapse</span></>}
         </button>
+        <a
+          href="https://hardbanrecordslab.online/"
+          title={compact ? "hardbanrecordslab.online" : undefined}
+          className={cn("flex items-center gap-3 w-full rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5 hrl-nav-link", compact && "justify-center px-2")}
+        >
+          <Home className="w-4 h-4 shrink-0" />
+          {!compact && <span>Main website</span>}
+        </a>
         <button
           onClick={signOut}
           className={cn("flex items-center gap-3 w-full rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-white/5 hrl-nav-link", compact && "justify-center px-2")}
