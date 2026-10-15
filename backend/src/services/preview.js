@@ -13,6 +13,7 @@ const path = require("path");
 const { spawn } = require("child_process");
 const { pipeline } = require("stream/promises");
 const objectStore = require("./storage");
+const engine = require("./engine");
 const { query, queryOne, queryAll } = require("../db/pool");
 const { logger } = require("../utils/logger");
 
@@ -144,8 +145,25 @@ async function backfill() {
 // in the bucket as `edit-v1-<content-hash>-<seconds>.mp3`.
 const EDIT_LENGTHS = [30, 60];
 
-function editKey(objectKey, seconds) {
-  return `edit-v1-${path.basename(objectKey).replace(/\.[^.]+$/, "")}-${seconds}.mp3`;
+function editKey(objectKey, seconds, version = "v1") {
+  return `edit-${version}-${path.basename(objectKey).replace(/\.[^.]+$/, "")}-${seconds}.mp3`;
+}
+
+// v2 = cut on bar/phrase lines by the Metadata Engine's planner (start/end/fade chosen from the beat grid); v1 = plain trim.
+function runPlannedEdit(input, output, plan) {
+  const dur = plan.end - plan.start;
+  const fade = plan.fadeOut > 0 ? `,afade=t=out:st=${Math.max(0, dur - plan.fadeOut).toFixed(3)}:d=${plan.fadeOut.toFixed(3)}` : "";
+  return new Promise((resolve, reject) => {
+    const args = [
+      "-hide_banner", "-loglevel", "error", "-y", "-ss", plan.start.toFixed(3), "-t", dur.toFixed(3), "-i", input,
+      "-af", `afade=t=in:st=0:d=0.02${fade}`, "-map_metadata", "0", "-c:a", "libmp3lame", "-b:a", "320k", output,
+    ];
+    const p = spawn(FFMPEG, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let err = "";
+    p.stderr.on("data", (d) => { err += d.toString().slice(0, 2000); });
+    p.on("error", reject);
+    p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}: ${err.trim().slice(0, 300)}`))));
+  });
 }
 
 function runEdit(input, output, seconds) {
@@ -166,7 +184,8 @@ function runEdit(input, output, seconds) {
 async function ensureEdit(track, seconds) {
   if (!EDIT_LENGTHS.includes(seconds) || !track?.object_key) return null;
   const key = editKey(track.object_key, seconds);
-  if (await objectStore.head(key)) return key;
+  const keyV2 = editKey(track.object_key, seconds, "v2");
+  if (await objectStore.head(keyV2)) return keyV2;
   const flightKey = `${track.id}:${seconds}`;
   if (!inflight.has(flightKey)) {
     inflight.set(flightKey, (async () => {
@@ -176,6 +195,15 @@ async function ensureEdit(track, seconds) {
       await slot();
       try {
         await pipeline(await objectStore.getStream(path.basename(track.object_key)), fs.createWriteStream(src));
+        const plan = await engine.planCutdown(src, seconds);
+        if (plan) {
+          await runPlannedEdit(src, out, plan);
+          await objectStore.putFile(keyV2, out, "audio/mpeg");
+          logger.info(`edit ${track.id} ${seconds}s planned ${plan.start}-${plan.end} (${plan.kind}, ${plan.bars} bars, ${plan.bpm} BPM)`);
+          return keyV2;
+        }
+        // planner unavailable or no usable window: reuse an earlier plain trim, otherwise make one
+        if (await objectStore.head(key)) return key;
         await runEdit(src, out, seconds);
         await objectStore.putFile(key, out, "audio/mpeg");
         return key;
