@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Music2, Play, Search, Sparkles, X } from "lucide-react";
 import { usePlayer } from "@/components/player/PlayerProvider";
@@ -75,6 +75,16 @@ export default function PublicLibrary() {
     queryKey: ["tracks", "public"],
     queryFn: async () => (await api.get<{ tracks: PublicTrack[] }>("/api/tracks/public")).tracks || [],
   });
+  // Search by sound: the description is embedded by the audio model and compared with every track's sonic vector.
+  const [debouncedQ, setDebouncedQ] = useState("");
+  useEffect(() => { const t = setTimeout(() => setDebouncedQ(q.trim()), 500); return () => clearTimeout(t); }, [q]);
+  const { data: bySound } = useQuery({
+    queryKey: ["tracks", "semantic", debouncedQ],
+    queryFn: async () => (await api.get<{ scores: Record<string, number>; count: number } | undefined>("/api/tracks/public/semantic", { q: debouncedQ })) ?? null,
+    enabled: debouncedQ.length >= 3,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
   const { data: similar, isFetching: loadingSimilar } = useQuery({
     queryKey: ["tracks", "similar", likeOf?.id],
     queryFn: async () => (await api.get<{ tracks: PublicTrack[] }>(`/api/tracks/public/similar/${likeOf!.id}`)).tracks,
@@ -105,11 +115,28 @@ export default function PublicLibrary() {
       (!vocals || (vocals === "instrumental" ? t.vocals === false : vocals === "vocal" ? t.vocals === true : t.vocals === true && t.vocal_gender === vocals)) &&
       (!tempo || (t.bpm != null && (tempo === "slow" ? t.bpm < 90 : tempo === "mid" ? t.bpm >= 90 && t.bpm <= 120 : t.bpm > 120))) &&
       (!genre || `${t.genre ?? ""} ${t.genres.join(" ")}`.toLowerCase().includes(genre)));
+    if (bySound && debouncedQ === q.trim() && terms.length) {
+      // Sound first (cosine to the description), keyword hits as a bonus; show the clearly relevant part of the catalogue.
+      const vals = list.map((t) => bySound.scores[String(t.id)]).filter((v): v is number => typeof v === "number");
+      if (vals.length) {
+        const hi = Math.max(...vals), lo = Math.min(...vals), span = Math.max(hi - lo, 1e-6);
+        const ranked = list
+          .map((t) => {
+            const s = bySound.scores[String(t.id)];
+            const sem = typeof s === "number" ? (s - lo) / span : 0;
+            const kw = Math.min(score(t, terms), 9) / 9;
+            return { t, v: 0.8 * sem + 0.2 * kw, sem };
+          })
+          .sort((a, b) => b.v - a.v);
+        return ranked.filter((x, i) => i < 12 || x.sem >= 0.45).slice(0, 60).map((x) => x.t);
+      }
+    }
     if (terms.length) {
       list = list.map((t) => ({ t, s: score(t, terms) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).map((x) => x.t);
     }
     return list;
-  }, [tracks, similar, likeOf, q, mood, energy, vocals, tempo, genre]);
+  }, [tracks, similar, likeOf, q, debouncedQ, bySound, mood, energy, vocals, tempo, genre]);
+  const soundMode = !!(bySound && debouncedQ === q.trim() && q.trim().length >= 3);
 
   const clear = () => { setQ(""); setMood(""); setEnergy(""); setVocals(""); setTempo(""); setGenre(""); };
   const toItem = (t: PublicTrack) => ({ id: String(t.id), title: t.title, artist: t.artist, fileUrl: streamUrl(String(t.id)), duration: t.duration ?? undefined, bpm: t.bpm ?? undefined, key: t.key ?? undefined });
@@ -144,6 +171,7 @@ export default function PublicLibrary() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Describe the mood, scene or use — e.g. luxury car ad, calm piano, summer travel vlog…" className="pl-9 h-11"
               value={q} onChange={(e) => { setQ(e.target.value); setLikeOf(null); }} aria-label="Search the catalog" />
+            {soundMode && <p className="mt-1.5 text-xs text-violet-300 inline-flex items-center gap-1"><Sparkles className="w-3 h-3" />Ranked by how the music sounds, not only by its tags</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select label="Mood" value={mood} onChange={(v) => { setMood(v); setLikeOf(null); }} options={moodOptions} />

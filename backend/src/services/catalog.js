@@ -1,9 +1,10 @@
 // Public catalogue view for supervisors: slim records built from the CMLP analysis (moods, energy, vocals,
 // use cases, keywords, instrumentation) and a tag-based "more like this".
 const { queryAll } = require("../db/pool");
+const semantic = require("./semantic");
 
 const TTL_MS = 5 * 60 * 1000;
-let cache = { at: 0, rows: [] };
+let cache = { at: 0, rows: [], vectors: new Map() };
 
 const arr = (v) => (Array.isArray(v) ? v.map((x) => String(x).toLowerCase().trim()).filter(Boolean) : []);
 
@@ -43,9 +44,17 @@ async function publicCatalog() {
     `SELECT t.id, t.title, t.artist, t.duration_ms/1000 AS duration, t.bpm, t.musical_key AS key, t.genre, t.mood, t.metadata
      FROM tracks t WHERE t.is_public = true ORDER BY t.created_at DESC, t.id DESC`
   );
-  cache = { at: Date.now(), rows: rows.map(slim) };
+  const vectors = new Map();
+  rows.forEach((r) => {
+    const v = r.metadata && typeof r.metadata === "object" ? r.metadata.sonicVector : null;
+    if (v) { try { vectors.set(String(r.id), semantic.unpack(v)); } catch (_) { /* ignore a malformed vector */ } }
+  });
+  cache = { at: Date.now(), rows: rows.map(slim), vectors };
   return cache.rows;
 }
+
+/** id -> sonic vector for the public tracks (call after publicCatalog()). */
+function publicVectors() { return cache.vectors; }
 
 // Weighted features: genre words and moods count most, instruments least; rare tags (IDF) beat common ones —
 // the catalogue is dominated by neo-soul, so plain overlap ranks everything alike.
@@ -108,4 +117,4 @@ function invalidate() {
   cache.at = 0;
 }
 
-module.exports = { publicCatalog, similar, slim, invalidate };
+module.exports = { publicCatalog, publicVectors, similar, slim, invalidate };

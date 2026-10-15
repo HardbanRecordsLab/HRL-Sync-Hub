@@ -6,6 +6,7 @@ const { logger } = require("../utils/logger");
 const objectStore = require("../services/storage");
 const preview = require("../services/preview");
 const catalog = require("../services/catalog");
+const semantic = require("../services/semantic");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -321,6 +322,22 @@ router.get("/", async (req, res) => {
 // ── GET /api/tracks/public (Public Library) ───────────────────────────────────
 router.get("/public", async (req, res) => {
   res.json({ tracks: await catalog.publicCatalog() });
+});
+
+// Search by sound: scores every public track against a free-text description using the audio model (services/semantic.js).
+// 200 { scores: {id: cosine}, count } or 204 when the catalogue has no sonic vectors yet / the engine is unreachable.
+router.get("/public/semantic", async (req, res) => {
+  const q = String(req.query.q || "").trim().slice(0, 300);
+  if (q.length < 3) return res.status(400).json({ error: "q must have at least 3 characters" });
+  try {
+    await catalog.publicCatalog();
+    const out = await semantic.scoreQuery(q, catalog.publicVectors());
+    if (!out) return res.status(204).end();
+    res.set("Cache-Control", "public, max-age=300").json(out);
+  } catch (e) {
+    logger.warn(`semantic search unavailable: ${e.message}`);
+    res.status(204).end();
+  }
 });
 
 // "More like this" — public tracks only, by tag overlap + tempo (services/catalog.js).
