@@ -3,7 +3,7 @@
 const { unpack, cosine } = require("./semantic");
 
 /** items: [{id, title, vector: b64, ...}] -> groups of >= 2 (connected by cosine >= threshold), strongest first. */
-function groupDuplicates(items, threshold = 0.97) {
+function groupDuplicates(items, threshold = 0.985) {
   const vecs = items.map((it) => ({ it, v: unpack(it.vector) })).filter((x) => x.v.length > 0);
   const parent = vecs.map((_, i) => i);
   const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };

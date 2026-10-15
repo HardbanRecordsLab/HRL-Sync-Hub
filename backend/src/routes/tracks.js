@@ -352,7 +352,7 @@ router.get("/public/semantic", async (req, res) => {
 // Possible duplicates / other masters: tracks whose sonic vectors are (nearly) identical. Cached 10 min.
 let dupesCache = { at: 0, key: "", out: null };
 router.get("/duplicates", async (req, res) => {
-  const threshold = Math.min(0.995, Math.max(0.9, Number(req.query.threshold) || 0.97));
+  const threshold = Math.min(0.999, Math.max(0.9, Number(req.query.threshold) || 0.985));
   const key = String(threshold);
   if (dupesCache.out && dupesCache.key === key && Date.now() - dupesCache.at < 10 * 60 * 1000) return res.json(dupesCache.out);
   const rows = await queryAll(
