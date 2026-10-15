@@ -330,8 +330,11 @@ router.get("/public/semantic", async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 300);
   if (q.length < 3) return res.status(400).json({ error: "q must have at least 3 characters" });
   try {
-    await catalog.publicCatalog();
-    const out = await semantic.scoreQuery(q, catalog.publicVectors());
+    const rows = await catalog.publicCatalog();
+    const vectors = catalog.publicVectors();
+    // Partial coverage would favour whichever tracks happen to have a vector: stay off until most of the catalogue has one.
+    if (vectors.size < semantic.MIN_COVERAGE * rows.length) return res.status(204).end();
+    const out = await semantic.scoreQuery(q, vectors);
     if (!out) return res.status(204).end();
     res.set("Cache-Control", "public, max-age=300").json(out);
   } catch (e) {

@@ -3,6 +3,7 @@
 // not by the words in their tags. Vectors arrive with Metadata Engine 3.0 analyses / the catalogue back-fill.
 const ME_URL = (process.env.METADATA_ENGINE_URL || "https://metadata.hardbanrecordslab.online").replace(/\/$/, "");
 const MIN_VECTORS = 10;
+const MIN_COVERAGE = 0.8; // share of the public catalogue that must have a vector
 const QUERY_TTL_MS = 10 * 60 * 1000;
 const queryCache = new Map(); // normalised query -> { at, vec }
 
@@ -58,4 +59,4 @@ async function scoreQuery(q, vectors) {
   return { scores, count: vectors.size };
 }
 
-module.exports = { scoreQuery, unpack, cosine, half, MIN_VECTORS, _queryCache: queryCache };
+module.exports = { scoreQuery, unpack, cosine, half, MIN_VECTORS, MIN_COVERAGE, _queryCache: queryCache };
