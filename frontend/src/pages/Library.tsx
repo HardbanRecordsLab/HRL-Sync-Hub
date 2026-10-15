@@ -16,6 +16,7 @@ import { usePlayer } from "@/components/player/PlayerProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api, streamUrl } from "@/lib/api";
+import DuplicatesDialog from "@/components/DuplicatesDialog";
 
 function fmtDur(s: number | null) {
   if (!s) return "—";
@@ -42,6 +43,8 @@ export default function Library() {
   const [search, setSearch] = useState(params.get("q") ?? "");
   const [debounced, setDebounced] = useState(search);
   const [clearanceFilter, setClearanceFilter] = useState("all");
+  const [qualityFilter, setQualityFilter] = useState("all");
+  const [dupesOpen, setDupesOpen] = useState(false);
   const [uploadProg, setUploadProg] = useState<{ done: number; total: number } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -54,11 +57,12 @@ export default function Library() {
 
   const PAGE = 100;
   const tracksQuery = useInfiniteQuery({
-    queryKey: ["tracks", debounced, clearanceFilter],
+    queryKey: ["tracks", debounced, clearanceFilter, qualityFilter],
     initialPageParam: 1,
     queryFn: ({ pageParam }) => api.get<{ tracks: any[]; total: number; page: number }>("/api/tracks", {
       search: debounced || undefined,
       clearance: clearanceFilter !== "all" ? clearanceFilter : undefined,
+      quality: qualityFilter !== "all" ? qualityFilter : undefined,
       page: pageParam, limit: PAGE,
     }),
     getNextPageParam: (last, all) => (all.length * PAGE < last.total ? last.page + 1 : undefined),
@@ -148,7 +152,7 @@ export default function Library() {
           <div>
             <h1 className="hrl-title">Library</h1>
             <p className="text-sm text-muted-foreground">
-              {isLoading ? "Loading…" : debounced || clearanceFilter !== "all"
+              {isLoading ? "Loading…" : debounced || clearanceFilter !== "all" || qualityFilter !== "all"
                 ? `${total} matching track${total !== 1 ? "s" : ""}`
                 : `${total} track${total !== 1 ? "s" : ""}`}
               {storage ? ` · ${fmtBytes(storage.localBytes)} of audio` : ""}
@@ -182,7 +186,17 @@ export default function Library() {
               <SelectItem value="not_cleared">Not cleared</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={qualityFilter} onValueChange={setQualityFilter}>
+            <SelectTrigger className="w-[190px] h-10"><SelectValue placeholder="Quality" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All quality</SelectItem>
+              <SelectItem value="review">Needs review</SelectItem>
+              <SelectItem value="legacy">Not analysed by Engine 3.0</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" className="h-10" onClick={() => setDupesOpen(true)} title="Tracks with (nearly) identical sound">Duplicates</Button>
         </div>
+        <DuplicatesDialog open={dupesOpen} onClose={() => setDupesOpen(false)} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
@@ -191,7 +205,7 @@ export default function Library() {
         ) : tracks.length === 0 ? (
           <div className="hrl-card text-center py-16 px-6">
             <Music2 className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-40" />
-            {debounced || clearanceFilter !== "all" ? (
+            {debounced || clearanceFilter !== "all" || qualityFilter !== "all" ? (
               <p className="text-muted-foreground">No tracks match these filters.</p>
             ) : (
               <>
@@ -237,7 +251,10 @@ export default function Library() {
                   </div>
 
                   <div className="min-w-0">
-                    <p className={cn("text-sm font-medium truncate", isActive && "text-violet-300")}>{track.title}</p>
+                    <p className={cn("text-sm font-medium truncate", isActive && "text-violet-300")}>
+                      {track.title}
+                      {track.metadata?.trust?.needsReview && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full border border-amber-500/40 text-amber-400 align-middle" title="The Engine 3.0 trust layer flagged this track">review</span>}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {[track.artist, track.genre].filter(Boolean).join(" · ")}
                       <span className="md:hidden">{[track.bpm && `${track.bpm} BPM`, track.key, fmtDur(track.duration)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>

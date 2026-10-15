@@ -7,6 +7,7 @@ const objectStore = require("../services/storage");
 const preview = require("../services/preview");
 const catalog = require("../services/catalog");
 const semantic = require("../services/semantic");
+const dupes = require("../services/dupes");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -278,7 +279,7 @@ router.post("/upload", requireAdmin, uploadSingle, async (req, res) => {
 
 // ── GET /api/tracks ────────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
-  const { search, clearance, bpm_min, bpm_max, key, genre, mood } = req.query;
+  const { search, clearance, bpm_min, bpm_max, key, genre, mood, quality } = req.query;
   // The UI pages through the whole catalog; cap a single page so one request stays cheap.
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
   const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -291,6 +292,9 @@ router.get("/", async (req, res) => {
     where += ` AND (t.title ILIKE $${params.length} OR t.artist ILIKE $${params.length} OR t.composer ILIKE $${params.length})`;
   }
   if (clearance) { params.push(clearance); where += ` AND t.clearance_status = $${params.length}::text`; }  // the CMLP foreign table exposes it as text
+  // quality=review -> the Engine 3.0 trust layer flagged it; quality=legacy -> not analysed by Engine 3.0 yet
+  if (quality === "review") where += ` AND (t.metadata->'trust'->>'needsReview') = 'true'`;
+  if (quality === "legacy") where += ` AND t.metadata->'trust' IS NULL AND t.metadata->'engine3' IS NULL`;
   if (key) { params.push(key); where += ` AND t.musical_key = $${params.length}`; }
   if (bpm_min) { params.push(bpm_min); where += ` AND t.bpm >= $${params.length}`; }
   if (bpm_max) { params.push(bpm_max); where += ` AND t.bpm <= $${params.length}`; }
@@ -316,6 +320,8 @@ router.get("/", async (req, res) => {
     [...params, limit, offset]
   );
 
+  // the list never needs the 1 KB sonic vector or the signed passport per row
+  for (const r of rows) if (r.metadata && typeof r.metadata === "object") { delete r.metadata.sonicVector; delete r.metadata.passport; }
   res.json({ tracks: rows, total: parseInt(count), page, limit });
 });
 
@@ -341,6 +347,22 @@ router.get("/public/semantic", async (req, res) => {
     logger.warn(`semantic search unavailable: ${e.message}`);
     res.status(204).end();
   }
+});
+
+// Possible duplicates / other masters: tracks whose sonic vectors are (nearly) identical. Cached 10 min.
+let dupesCache = { at: 0, key: "", out: null };
+router.get("/duplicates", async (req, res) => {
+  const threshold = Math.min(0.995, Math.max(0.9, Number(req.query.threshold) || 0.97));
+  const key = String(threshold);
+  if (dupesCache.out && dupesCache.key === key && Date.now() - dupesCache.at < 10 * 60 * 1000) return res.json(dupesCache.out);
+  const rows = await queryAll(
+    `SELECT t.id, t.title, t.artist, t.duration_ms/1000 AS duration, t.bpm, t.album, t.metadata->>'sonicVector' AS vector
+     FROM tracks t WHERE t.metadata->>'sonicVector' IS NOT NULL`
+  );
+  const groups = dupes.groupDuplicates(rows, threshold);
+  const out = { threshold, analysed: rows.length, groups };
+  dupesCache = { at: Date.now(), key, out };
+  res.json(out);
 });
 
 // "More like this" — public tracks only, by tag overlap + tempo (services/catalog.js).

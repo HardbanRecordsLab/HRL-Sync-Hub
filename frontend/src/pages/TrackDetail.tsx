@@ -11,6 +11,7 @@ import { api, authedUrl, streamUrl } from "@/lib/api";
 import { usePlayer } from "@/components/player/PlayerProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import EngineQuality from "@/components/EngineQuality";
 
 const CLEARANCE_OPTIONS = [
   { v: "cleared_ready", l: "Cleared" },
@@ -256,6 +257,7 @@ export default function TrackDetail() {
           </div>
 
           <div className="space-y-4">
+            <EngineQuality m={m} />
             {/* Rights */}
             <section className="hrl-card p-5 space-y-3">
               <h2 className="text-base font-semibold">Rights & IDs</h2>
