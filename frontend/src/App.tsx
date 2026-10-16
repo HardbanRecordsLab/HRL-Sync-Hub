@@ -1,9 +1,10 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { setSeo, seoForPath } from "@/lib/seo";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PlayerProvider } from "@/components/player/PlayerProvider";
 import Auth from "./pages/Auth";
@@ -47,6 +48,13 @@ function Protected({ children }: { children: JSX.Element }) {
   return isAuthenticated ? children : <Navigate to="/" replace />;
 }
 
+// Sets title/description/canonical/robots for the current route (public pages indexable, the rest noindex).
+function RouteSeo({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const { pathname } = useLocation();
+  useEffect(() => setSeo(seoForPath(pathname, isAuthenticated)), [pathname, isAuthenticated]);
+  return null;
+}
+
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -54,6 +62,7 @@ function AppRoutes() {
 
   return (
     <BrowserRouter>
+      <RouteSeo isAuthenticated={isAuthenticated} />
       <Suspense fallback={<Spinner />}>
       <Routes>
         <Route path="/" element={isAuthenticated ? <Dashboard /> : <Auth />} />

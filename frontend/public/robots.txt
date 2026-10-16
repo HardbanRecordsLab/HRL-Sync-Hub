@@ -1,3 +1,16 @@
-# Private library — not for indexing.
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /api/
+Disallow: /library
+Disallow: /lyrics
+Disallow: /pitches
+Disallow: /contacts
+Disallow: /projects
+Disallow: /analytics
+Disallow: /sales
+Disallow: /promotion
+Disallow: /settings
+Disallow: /share/
+Disallow: /license/
+
+Sitemap: https://hrl-sync.hub.hardbanrecordslab.online/sitemap.xml
