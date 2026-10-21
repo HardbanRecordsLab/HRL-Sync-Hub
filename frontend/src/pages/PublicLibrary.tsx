@@ -61,6 +61,16 @@ function Select({ value, onChange, label, options }: { value: string; onChange: 
 
 /** Public catalog for supervisors: smart search, filters, "more like this", watermarked previews and licensing. */
 export default function PublicLibrary() {
+  // Prices come from the same endpoint as the licence dialog, so this sentence can never drift from the checkout.
+  const { data: tierData } = useQuery({
+    queryKey: ["license-tiers"],
+    queryFn: () => api.get<{ tiers: { code: string; price: number | null; quote_only: boolean }[] }>("/api/licenses/tiers"),
+  });
+  const onlinePrice = tierData?.tiers.find((t) => t.code === "online")?.price;
+  const commercialPrice = tierData?.tiers.find((t) => t.code === "commercial")?.price;
+  const priceLine = onlinePrice && commercialPrice
+    ? `and license a track online in a minute: from ${onlinePrice} zł for online videos, ${commercialPrice} zł for ads and commercial use.`
+    : "and license a track online in a minute.";
   const player = usePlayer();
   const [q, setQ] = useState("");
   const [mood, setMood] = useState("");
@@ -161,8 +171,8 @@ export default function PublicLibrary() {
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Music catalog</h1>
           <p className="text-muted-foreground max-w-2xl">
             Original music from Hardban Records Lab for film, advertising, games and online content. Describe the scene you are
-            scoring — “coffee commercial”, “late night city drive”, “female vocal, calm” — and license a track online in a minute:
-            from 79 zł for online videos, 429 zł for ads and commercial use. Previews carry a soft audible watermark; the licensed file is clean.
+            scoring — “coffee commercial”, “late night city drive”, “female vocal, calm” —
+            {priceLine} Previews carry a soft audible watermark; the licensed file is clean.
           </p>
         </div>
 
