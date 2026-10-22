@@ -1403,5 +1403,325 @@ export const PAIRS: Array<[string, string]> = [
 [
 "Zapłać ${}",
 "Pay ${}"
+],
+[
+"Panel",
+"Dashboard"
+],
+[
+"Biblioteka",
+"Library"
+],
+[
+"Teksty",
+"Lyrics"
+],
+[
+"Pitche",
+"Pitches"
+],
+[
+"Kontakty",
+"Contacts"
+],
+[
+"Projekty",
+"Projects"
+],
+[
+"Promocja",
+"Promotion"
+],
+[
+"Sprzedaż",
+"Sales"
+],
+[
+"Analityka",
+"Analytics"
+],
+[
+"Ustawienia",
+"Settings"
+],
+[
+"Zwiń",
+"Collapse"
+],
+[
+"Utwory",
+"Tracks"
+],
+[
+"Odtworzenia",
+"Plays"
+],
+[
+"Zamknij",
+"Close"
+],
+[
+"Opis",
+"Description"
+],
+[
+"Telefon",
+"Phone"
+],
+[
+"Firma",
+"Company"
+],
+[
+"Rola",
+"Role"
+],
+[
+"Notatki",
+"Notes"
+],
+[
+"Zapisz",
+"Save"
+],
+[
+"Kontakt",
+"Contact"
+],
+[
+"NOWY",
+"NEW"
+],
+[
+"KONTAKT",
+"CONTACT"
+],
+[
+"pusty",
+"empty"
+],
+[
+"WYSŁANO",
+"SENT"
+],
+[
+"Krótka lista",
+"Shortlist"
+],
+[
+"Licencjonowano",
+"Licensed"
+],
+[
+"Zarchiwizowano",
+"Archived"
+],
+[
+"Utwórz projekt",
+"Create Project"
+],
+[
+"Partnerzy ({})",
+"Partners ({})"
+],
+[
+"Zgłoszenia ({})",
+"Submissions ({})"
+],
+[
+"Wnioski ({})",
+"Applications ({})"
+],
+[
+"Przychód",
+"Revenue"
+],
+[
+"Ceny",
+"Prices"
+],
+[
+"Cena Online",
+"Online price"
+],
+[
+"Cena Komercja",
+"Commercial price"
+],
+[
+"Komercja",
+"Commercial"
+],
+[
+"Rozszerzona",
+"Extended"
+],
+[
+"Zamówienia",
+"Orders"
+],
+[
+"Pobrania",
+"Downloads"
+],
+[
+"Profil",
+"Profile"
+],
+[
+"Bezpieczeństwo",
+"Security"
+],
+[
+"YouTube, media społecznościowe, podcasty, transmisje i strony WWW — także kanały z monetyzacją. Bez płatnych reklam.",
+"YouTube, social media, podcasts, streams and websites — monetised channels included. No paid ads."
+],
+[
+"Wszystko z pakietu Online oraz reklamy i płatna promocja w internecie, filmy firmowe i produktowe, wydarzenia oraz użycie w sklepach.",
+"Everything in Online plus online ads and paid promotion, corporate and product videos, events and in-store use."
+],
+[
+"TV, radio, kino, VOD, gry i aplikacje, kampanie krajowe i międzynarodowe, wyłączność.",
+"TV, radio, cinema, VOD, games and apps, national or international campaigns, exclusivity."
+],
+[
+"Duplikaty",
+"Duplicates"
+],
+[
+"Utwór",
+"Track"
+],
+[
+"Weryfikacja praw",
+"Clearance"
+],
+[
+"Tonacja",
+"Key"
+],
+[
+"Długość",
+"Length"
+],
+[
+"Zweryfikowany",
+"Cleared"
+],
+[
+"do sprawdzenia",
+"review"
+],
+[
+"Zobacz",
+"View"
+],
+[
+"Edytuj",
+"Edit"
+],
+[
+"Usuń",
+"Delete"
+],
+[
+"Wykonawca",
+"Artist"
+],
+[
+"Język",
+"Language"
+],
+[
+"Szkic",
+"Draft"
+],
+[
+"Prawa autorskie",
+"Copyright"
+],
+[
+"Z wulgaryzmami",
+"Explicit"
+],
+[
+"Publiczny",
+"Public"
+],
+[
+"Utwory: {}",
+"{} tracks"
+],
+[
+"Utwory: {}",
+"{} track"
+],
+[
+"Pasujące utwory: {}",
+"{} matching tracks"
+],
+[
+"Pasujące utwory: {}",
+"{} matching track"
+],
+[
+"· {} GB dźwięku",
+"· {} GB of audio"
+],
+[
+"Playlisty: {} · do udostępnienia klientom",
+"{} playlists · shareable with clients"
+],
+[
+"Playlisty: {} · do udostępnienia klientom",
+"{} playlist · shareable with clients"
+],
+[
+"Supervisorzy i klienci: {}",
+"{} supervisors & clients"
+],
+[
+"Supervisorzy i klienci: {}",
+"{} supervisor & clients"
+],
+[
+"Wpisy: {}",
+"{} entries"
+],
+[
+"Wpisy: {}",
+"{} entry"
+],
+[
+"Przesłano {} plików do biblioteki VPS",
+"Uploaded {} files to the VPS library"
+],
+[
+"Przesłano {} plik do biblioteki VPS",
+"Uploaded {} file to the VPS library"
+],
+[
+"{} dni temu",
+"{} days ago"
+],
+[
+"{} dzień temu",
+"{} day ago"
+],
+[
+"{} godz. temu",
+"{} hours ago"
+],
+[
+"{} godz. temu",
+"{} hour ago"
+],
+[
+"{} min temu",
+"{} minutes ago"
+],
+[
+"{} min temu",
+"{} minute ago"
 ]
 ];

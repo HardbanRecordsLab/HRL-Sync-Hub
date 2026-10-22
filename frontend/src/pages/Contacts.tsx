@@ -66,7 +66,7 @@ export default function Contacts() {
         <div className="flex items-end justify-between">
           <div>
             <h1 className="hrl-title text-5xl mb-1">Contacts</h1>
-            <p className="hrl-label text-muted-foreground">{contacts.length} supervisor{contacts.length !== 1 ? "s" : ""} & clients</p>
+            <p className="hrl-label text-muted-foreground">{`${contacts.length} supervisor${contacts.length !== 1 ? "s" : ""} & clients`}</p>
           </div>
           <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setEditing(null); setForm(EMPTY); } }}>
             <DialogTrigger asChild>

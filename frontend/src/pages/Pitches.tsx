@@ -105,7 +105,7 @@ export default function Pitches() {
           <div>
             <h1 className="hrl-title text-5xl mb-1">Pitches</h1>
             <p className="hrl-label text-muted-foreground">
-              {playlists.length} playlist{playlists.length !== 1 ? "s" : ""} · shareable with clients
+              {`${playlists.length} playlist${playlists.length !== 1 ? "s" : ""} · shareable with clients`}
             </p>
           </div>
           <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setEditing(null); setForm({ name: "", description: "" }); } }}>
@@ -181,7 +181,7 @@ export default function Pitches() {
                         <p className="hrl-label text-muted-foreground truncate mt-0.5">{pl.description}</p>
                       )}
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="hrl-label text-muted-foreground">{pl.track_count} track{pl.track_count !== 1 ? "s" : ""}</span>
+                        <span className="hrl-label text-muted-foreground">{`${pl.track_count} track${pl.track_count !== 1 ? "s" : ""}`}</span>
                         <span className="hrl-label text-muted-foreground">
                           Updated {formatDistanceToNow(new Date(pl.updated_at), { addSuffix: true })}
                         </span>

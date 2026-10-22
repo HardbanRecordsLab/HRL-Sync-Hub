@@ -175,7 +175,7 @@ export default function LyricsCatalog() {
           <div>
             <h1 className="hrl-title text-5xl mb-1">Lyrics</h1>
             <p className="hrl-label text-muted-foreground">
-              {lyrics.length} entr{lyrics.length !== 1 ? "ies" : "y"}
+              {`${lyrics.length} ${lyrics.length !== 1 ? "entries" : "entry"}`}
             </p>
           </div>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(EMPTY_FORM); } }}>
