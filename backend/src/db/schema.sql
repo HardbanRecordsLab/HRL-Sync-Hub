@@ -291,7 +291,7 @@ BEGIN
 END $$;
 
 -- ─── Sync licence shop (2026-10-11) ─────────────────────────────────────────
--- Tiers are editable from the admin panel; prices in grosze (PLN). Terms:
+-- Tiers are editable from the admin panel; prices in cents (USD; the column keeps its historical name). Terms:
 -- https://hardbanrecordslab.online/sync-license-terms/
 CREATE TABLE IF NOT EXISTS license_tiers (
   code          TEXT PRIMARY KEY,
@@ -303,8 +303,8 @@ CREATE TABLE IF NOT EXISTS license_tiers (
   active        BOOLEAN NOT NULL DEFAULT true
 );
 INSERT INTO license_tiers (code, name, summary, price_grosze, quote_only, sort) VALUES
-  ('online', 'Online', 'YouTube, social media, podcasts, streams and websites — monetised channels included. No paid ads.', 7900, false, 1),
-  ('commercial', 'Commercial', 'Everything in Online plus online ads and paid promotion, corporate and product videos, events and in-store use.', 42900, false, 2),
+  ('online', 'Online', 'YouTube, social media, podcasts, streams and websites — monetised channels included. No paid ads.', 1900, false, 1),
+  ('commercial', 'Commercial', 'Everything in Online plus online ads and paid promotion, corporate and product videos, events and in-store use.', 9900, false, 2),
   ('extended', 'Extended', 'TV, radio, cinema, VOD, games and apps, national or international campaigns, exclusivity.', NULL, true, 3)
 ON CONFLICT (code) DO NOTHING;
 
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS license_orders (
   tier_code           TEXT NOT NULL,
   tier_name           TEXT NOT NULL,
   price_grosze        INTEGER NOT NULL,
-  currency            TEXT NOT NULL DEFAULT 'PLN',
+  currency            TEXT NOT NULL DEFAULT 'USD',
   buyer_name          TEXT NOT NULL,
   buyer_email         TEXT NOT NULL,
   buyer_company       TEXT,

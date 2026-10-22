@@ -86,7 +86,7 @@ export function LicenseSuccess() {
           </div>
           <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div><dt className="text-muted-foreground">Licence no.</dt><dd className="font-semibold">{order.number}</dd></div>
-            <div><dt className="text-muted-foreground">Tier</dt><dd>{order.tier_name} · {order.price.toFixed(2)} zł</dd></div>
+            <div><dt className="text-muted-foreground">Tier</dt><dd>{order.tier_name} · ${order.price.toFixed(2)}</dd></div>
             <div><dt className="text-muted-foreground">Track</dt><dd>{order.track_title} — {order.track_artist}</dd></div>
             <div><dt className="text-muted-foreground">Project</dt><dd>{order.project_title}</dd></div>
           </dl>

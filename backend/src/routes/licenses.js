@@ -21,7 +21,7 @@ const FRONTEND = () => (process.env.FRONTEND_URL || "https://hrl-sync.hub.hardba
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
-const money = (g) => `${(g / 100).toFixed(2).replace(".", ",")} zł`;
+const money = (g) => `$${(g / 100).toFixed(2)}`;
 
 function newNumber() {
   // HRL-SYNC-2026-7K3QF9 — unambiguous alphabet, ~1e9 combinations per year

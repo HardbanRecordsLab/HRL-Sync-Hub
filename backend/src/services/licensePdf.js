@@ -27,7 +27,7 @@ function licensor() {
 }
 
 function money(grosze) {
-  return `${(grosze / 100).toFixed(2).replace(".", ",")} zł`;
+  return `$${(grosze / 100).toFixed(2)}`;
 }
 
 /** Returns a Promise<Buffer>. */

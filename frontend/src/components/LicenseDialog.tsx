@@ -82,7 +82,7 @@ export function LicenseDialog({ track, onClose }: { track: TrackRef | null; onCl
                 >
                   <span className="flex items-center justify-between gap-3">
                     <span className="font-medium">{t.name}</span>
-                    <span className="font-semibold tabular-nums">{t.price == null ? "Quote" : `${t.price.toFixed(0)} zł`}</span>
+                    <span className="font-semibold tabular-nums">{t.price == null ? "Quote" : `$${t.price.toFixed(0)}`}</span>
                   </span>
                   <span className="block text-sm text-muted-foreground mt-0.5">{t.summary}</span>
                 </button>
@@ -117,7 +117,7 @@ export function LicenseDialog({ track, onClose }: { track: TrackRef | null; onCl
             <button type="submit" disabled={busy || !selected || (!quote && (!terms || !waiver))}
               className="hrl-btn-primary w-full py-2.5 flex items-center justify-center gap-2 disabled:opacity-50">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-              {quote ? "Request a quote" : `Pay ${selected?.price?.toFixed(0) ?? ""} zł`}
+              {quote ? "Request a quote" : `Pay $${selected?.price?.toFixed(0) ?? ""}`}
             </button>
             {!quote && <p className="text-xs text-muted-foreground text-center">Secure payment by Stripe. Price is final (seller exempt from VAT). You get the clean, full-quality file plus ready-made 30 s and 60 s edits, and a PDF licence by e-mail right away.</p>}
           </form>

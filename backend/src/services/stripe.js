@@ -36,7 +36,7 @@ async function call(method, path, body) {
   return data;
 }
 
-/** One-off Checkout session for a licence. Amount in grosze. */
+/** One-off Checkout session for a licence. Amount in cents (USD). */
 function createCheckoutSession({ orderId, title, description, amount, email, successUrl, cancelUrl }) {
   return call("POST", "/checkout/sessions", {
     mode: "payment",
@@ -51,7 +51,7 @@ function createCheckoutSession({ orderId, title, description, amount, email, suc
       0: {
         quantity: 1,
         price_data: {
-          currency: "pln",
+          currency: "usd",
           unit_amount: amount,
           product_data: { name: title, description },
         },

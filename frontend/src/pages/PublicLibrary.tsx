@@ -70,7 +70,7 @@ export default function PublicLibrary() {
   const onlinePrice = tierData?.tiers.find((t) => t.code === "online")?.price;
   const commercialPrice = tierData?.tiers.find((t) => t.code === "commercial")?.price;
   const priceLine = onlinePrice && commercialPrice
-    ? `and license a track online in a minute: from ${onlinePrice} zł for online videos, ${commercialPrice} zł for ads and commercial use.`
+    ? `and license a track online in a minute: from $${onlinePrice} for online videos, $${commercialPrice} for ads and commercial use.`
     : "and license a track online in a minute.";
   const player = usePlayer();
   const [q, setQ] = useState("");

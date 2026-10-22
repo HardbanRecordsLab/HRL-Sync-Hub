@@ -17,7 +17,7 @@ type Inquiry = { id: string; track_title: string | null; name: string; email: st
 type Data = { orders: Order[]; totals: { sold: number; revenue: number }; inquiries: Inquiry[]; tiers: Tier[]; stripe: boolean };
 
 const STATUS: Record<string, string> = { paid: "Paid", pending: "Awaiting payment", expired: "Abandoned" };
-const zl = (g: number) => `${(g / 100).toFixed(2)} zł`;
+const zl = (g: number) => `$${(g / 100).toFixed(2)}`;
 
 function TierRow({ t }: { t: Tier }) {
   const qc = useQueryClient();
@@ -36,7 +36,7 @@ function TierRow({ t }: { t: Tier }) {
       {t.quote_only ? <span className="text-sm text-muted-foreground">Quote on request</span> : (
         <div className="flex items-center gap-2">
           <Input className="w-24 h-9" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} aria-label={`${t.name} price`} />
-          <span className="text-sm text-muted-foreground">zł</span>
+          <span className="text-sm text-muted-foreground">USD</span>
           <button className="text-sm px-3 h-9 rounded-lg border border-border hover:bg-white/5" disabled={save.isPending}
             onClick={() => save.mutate({ price: price.replace(",", ".") })}>Save</button>
         </div>

@@ -464,12 +464,12 @@ async function check(name, fn) {
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
   let licTrackId, paidOrder;
 
-  await check("GET /api/licenses/tiers → Online 79 zł, Commercial 429 zł, Extended on quote", async () => {
+  await check("GET /api/licenses/tiers → Online $19, Commercial $99, Extended on quote", async () => {
     const r = await request(app).get("/api/licenses/tiers");
     assert.strictEqual(r.status, 200, JSON.stringify(r.body));
     const byCode = Object.fromEntries(r.body.tiers.map((t) => [t.code, t]));
-    assert.strictEqual(byCode.online.price, 79);
-    assert.strictEqual(byCode.commercial.price, 429);
+    assert.strictEqual(byCode.online.price, 19);
+    assert.strictEqual(byCode.commercial.price, 99);
     assert.strictEqual(byCode.extended.quote_only, true);
   });
 
