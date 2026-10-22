@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Download, FileText, Loader2, ShieldCheck, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import HrlLangSwitch from "@/lib/hrl/HrlLangSwitch";
 
 type OrderStatus = {
   number: string | null; status: string; track_title: string; track_artist: string; tier_name: string; price: number;
@@ -22,7 +23,8 @@ function Shell({ children }: { children: React.ReactNode }) {
             <p className="text-sm font-semibold leading-tight">HRL Sync Hub</p>
             <p className="text-xs text-muted-foreground leading-tight">Hardban Records Lab</p>
           </div>
-          <Link to="/public-library" className="ml-auto text-sm text-muted-foreground hover:text-foreground">Music catalog</Link>
+          <div className="ml-auto"><HrlLangSwitch /></div>
+          <Link to="/public-library" className="text-sm text-muted-foreground hover:text-foreground">Music catalog</Link>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-10">{children}</main>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { LicenseDialog } from "@/components/LicenseDialog";
 import { api, streamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import HrlLangSwitch from "@/lib/hrl/HrlLangSwitch";
 
 type PublicTrack = {
   id: number; title: string; artist: string; duration: number | null; bpm: number | null; key: string | null;
@@ -161,7 +162,8 @@ export default function PublicLibrary() {
             <p className="text-sm font-semibold leading-tight">HRL Sync Hub</p>
             <p className="text-xs text-muted-foreground leading-tight">Hardban Records Lab</p>
           </div>
-          <a href="https://hardbanrecordslab.online/" className="ml-auto text-sm text-muted-foreground hover:text-foreground">← Main website</a>
+          <div className="ml-auto"><HrlLangSwitch /></div>
+          <a href="https://hardbanrecordslab.online/" className="text-sm text-muted-foreground hover:text-foreground">← Main website</a>
           <a href="https://hardbanrecordslab.online/sync-hub/" className="text-sm text-muted-foreground hover:text-foreground">Licensing enquiries</a>
         </div>
       </header>

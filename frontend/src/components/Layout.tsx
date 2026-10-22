@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { AudioPlayerBar } from "./player/AudioPlayerBar";
 import { usePlayer } from "./player/PlayerProvider";
 import { useAuth } from "@/contexts/AuthContext";
+import HrlLangSwitch from "@/lib/hrl/HrlLangSwitch";
 
 interface LayoutProps { children: React.ReactNode; }
 
@@ -103,6 +104,7 @@ export default function Layout({ children }: LayoutProps) {
         >
           {compact ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Collapse</span></>}
         </button>
+        <div className={cn("px-3 py-2", compact && "px-1 flex justify-center")}><HrlLangSwitch /></div>
         <a
           href="https://hardbanrecordslab.online/"
           title={compact ? "hardbanrecordslab.online" : undefined}
@@ -131,6 +133,7 @@ export default function Layout({ children }: LayoutProps) {
         </button>
         <img src="/favicon.png" alt="" className="w-7 h-7 object-contain rounded bg-white p-0.5" />
         <span className="text-sm font-semibold">HRL Sync Hub</span>
+        <div className="ml-auto"><HrlLangSwitch /></div>
       </header>
 
       {mobileOpen && <div className="md:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setMobileOpen(false)} />}

@@ -6,6 +6,7 @@ import { usePlayer } from "@/components/player/PlayerProvider";
 import { sharedStreamUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { LicenseDialog } from "@/components/LicenseDialog";
+import HrlLangSwitch from "@/lib/hrl/HrlLangSwitch";
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
@@ -84,8 +85,11 @@ export default function SharedPlaylist() {
             <h1 className="hrl-title text-4xl">{playlist.name}</h1>
             {playlist.description && <p className="text-sm text-muted-foreground mt-1">{playlist.description}</p>}
           </div>
-          <div className="w-16 h-16 flex items-center justify-center overflow-hidden rounded-xl bg-white/95 p-1.5">
-            <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
+          <div className="flex items-center gap-3">
+            <HrlLangSwitch />
+            <div className="w-16 h-16 flex items-center justify-center overflow-hidden rounded-xl bg-white/95 p-1.5">
+              <img src="/favicon.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
           </div>
         </div>
       </header>

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import HrlLangSwitch from "@/lib/hrl/HrlLangSwitch";
 
 /** /partners — playlist curators, radios, DJs and creators apply to play and promote HRL music. */
 export default function PartnerApply() {
@@ -38,7 +39,8 @@ export default function PartnerApply() {
             <p className="text-sm font-semibold leading-tight">HRL Sync Hub</p>
             <p className="text-xs text-muted-foreground leading-tight">Hardban Records Lab</p>
           </div>
-          <Link to="/public-library" className="ml-auto text-sm text-muted-foreground hover:text-foreground">Music catalog</Link>
+          <div className="ml-auto"><HrlLangSwitch /></div>
+          <Link to="/public-library" className="text-sm text-muted-foreground hover:text-foreground">Music catalog</Link>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-10 space-y-6">
