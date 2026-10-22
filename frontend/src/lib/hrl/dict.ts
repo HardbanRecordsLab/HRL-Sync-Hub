@@ -1279,5 +1279,125 @@ export const PAIRS: Array<[string, string]> = [
 [
 "Katalog muzyki HardbanRecords Lab do licencjonowania: odsłuchaj i licencjonuj utwory do filmu, reklamy i gier.",
 "HardbanRecords Lab music catalogue for licensing: listen to and license tracks for film, advertising and games."
+],
+[
+"Powiadomienia (F8)",
+"Notifications (F8)"
+],
+[
+"Powiadomienia alt+T",
+"Notifications alt+T"
+],
+[
+"E-mail",
+"Email"
+],
+[
+"Hasło",
+"Password"
+],
+[
+"Autorska muzyka Hardban Records Lab do filmu, reklamy, gier i treści online. Opisz scenę, którą ilustrujesz — „reklama kawy”, „nocna jazda po mieście”, „wokal żeński, spokojny” —",
+"Original music from Hardban Records Lab for film, advertising, games and online content. Describe the scene you are scoring — “coffee commercial”, “late night city drive”, “female vocal, calm” —"
+],
+[
+"i licencjonuj utwór online w minutę.",
+"and license a track online in a minute."
+],
+[
+"i licencjonuj utwór online w minutę: od {} zł za filmy online, {} zł za reklamy i użycie komercyjne.",
+"and license a track online in a minute: from {} zł for online videos, {} zł for ads and commercial use."
+],
+[
+"Podglądy mają delikatny, słyszalny znak wodny; licencjonowany plik jest czysty.",
+"Previews carry a soft audible watermark; the licensed file is clean."
+],
+[
+"Prowadzisz playlistę, stację radiową lub audycję, kanał na YouTube, podcast, bloga albo wieczory DJ-skie? Szukamy partnerów, którzy zaprezentują muzykę artystów Hardban Records Lab — neo-soul, jazz, R&B, chill, house i nie tylko. Opowiedz nam o swoim medium, a odpowiemy z nowościami i warunkami współpracy.",
+"Run a playlist, a radio station or show, a YouTube channel, a podcast, a blog or a DJ night? We are looking for partners to feature music from Hardban Records Lab artists — neo-soul, jazz, R&B, chill, house and more. Tell us about your outlet and we will get back to you with new releases and the terms of cooperation."
+],
+[
+"Zasięg",
+"Reach"
+],
+[
+"obserwujący / słuchacze",
+"followers / listeners"
+],
+[
+"Kraj",
+"Country"
+],
+[
+"polityką prywatności",
+"privacy policy"
+],
+[
+"Wyślij",
+"Send"
+],
+[
+"Playlista Spotify",
+"Spotify playlist"
+],
+[
+"Playlista Apple Music",
+"Apple Music playlist"
+],
+[
+"Kanał YouTube",
+"YouTube channel"
+],
+[
+"Radio FM",
+"FM radio"
+],
+[
+"Radio internetowe",
+"Online radio"
+],
+[
+"Audycja radiowa",
+"Radio show"
+],
+[
+"Blog / magazyn",
+"Blog / magazine"
+],
+[
+"Platforma kuratorska",
+"Curator platform"
+],
+[
+"Twórca TikTok / Reels",
+"TikTok / Reels creator"
+],
+[
+"DJ / klub",
+"DJ / club"
+],
+[
+"Lokal / wydarzenie",
+"Venue / event"
+],
+[
+"Inne",
+"Other"
+],
+[
+"Sprawy licencji: contact@hardbanrecordslab.online; reklamacje i dane osobowe: legal@hardbanrecordslab.online.",
+"Licence matters: contact@hardbanrecordslab.online; complaints and personal data: legal@hardbanrecordslab.online."
+],
+[
+"Regulamin HRL Sync Hub | HardbanRecords Lab",
+"HRL Sync Hub Terms of Service | HardbanRecords Lab"
+],
+[
+"Regulamin",
+"Terms of Service"
+],
+[
+"Administrator: Kamil Skomra (HardbanRecords Lab), kontakt w sprawach danych: legal@hardbanrecordslab.online.",
+"Controller: Kamil Skomra (HardbanRecords Lab), contact for data matters: legal@hardbanrecordslab.online."
 ]
 ];

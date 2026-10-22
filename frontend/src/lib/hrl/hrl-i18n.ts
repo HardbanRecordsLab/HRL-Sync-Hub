@@ -48,6 +48,9 @@ let toPl = new Map<string, string>();
 let patEn: Pattern[] = [];
 let patPl: Pattern[] = [];
 const listeners = new Set<Listener>();
+// Tryb zbierania brakujących tłumaczeń (QA): ?hrl_debug=1 — lista dostępna w window.__hrlMissing().
+let debug = false;
+const missing = new Set<string>();
 let observer: MutationObserver | null = null;
 
 const origText = new WeakMap<Text, string>();
@@ -130,14 +133,22 @@ function lookup(raw: string): string | null {
       const m = key.match(p.re);
       if (m) {
         let i = 0;
-        res = p.to.replace(/\{(\d*)\}/g, (_x, n: string) => m[n ? Number(n) : ++i] ?? '');
+        // zmienne części wzorca też są tłumaczone, jeśli znajdą się w słowniku (np. tytuł strony w „{} — MasteringPro”)
+        res = p.to.replace(/\{(\d*)\}/g, (_x, n: string) => {
+          const g = m[n ? Number(n) : ++i] ?? '';
+          const h = map.get(norm(g));
+          return h !== undefined ? h : g;
+        });
         break;
       }
     }
   }
   const base = res !== null ? res : key;
   const post = lang === 'en' ? postProcessEn(base) : base;
-  if (post === key) return null;
+  if (post === key) {
+    if (debug && res === null) missing.add(key);
+    return null;
+  }
   const lead = raw.match(/^\s*/)![0];
   const trail = raw.match(/\s*$/)![0];
   return lead + post + trail;
@@ -255,7 +266,8 @@ function buildDictionary(pairs: Array<[string, string]>): void {
   for (const [pl, en] of pairs) {
     const p = norm(pl);
     const e = norm(en);
-    if (!p || !e || p === e) continue;
+    if (!p || !e) continue;
+    if (p === e && !p.includes('{}')) continue;
     if (p.includes('{}') || e.includes('{}')) {
       patEn.push({ re: compile(p), to: en });
       patPl.push({ re: compile(e), to: pl });
@@ -311,6 +323,10 @@ export function initHrlI18n(options: HrlI18nOptions): void {
   opts = options;
   buildDictionary(options.pairs);
   lang = resolveInitialLang(options.storageKey);
+  try {
+    debug = new URLSearchParams(window.location.search).has('hrl_debug') || localStorage.getItem('hrl_debug') === '1';
+  } catch { /* ignore */ }
+  if (debug) (window as unknown as Record<string, unknown>).__hrlMissing = () => Array.from(missing);
   applyMeta();
   wrapDialogs();
   observer = new MutationObserver((records) => {
