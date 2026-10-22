@@ -333,6 +333,7 @@ CREATE TABLE IF NOT EXISTS license_orders (
   paid_at             TIMESTAMPTZ,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE license_orders ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
 CREATE INDEX IF NOT EXISTS idx_license_orders_status  ON license_orders(status);
 CREATE INDEX IF NOT EXISTS idx_license_orders_created ON license_orders(created_at DESC);
 

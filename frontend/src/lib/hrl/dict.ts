@@ -1305,8 +1305,8 @@ export const PAIRS: Array<[string, string]> = [
 "and license a track online in a minute."
 ],
 [
-"i licencjonuj utwór online w minutę: od {} zł za filmy online, {} zł za reklamy i użycie komercyjne.",
-"and license a track online in a minute: from {} zł for online videos, {} zł for ads and commercial use."
+"i licencjonuj utwór online w minutę: od ${} za filmy online, ${} za reklamy i użycie komercyjne.",
+"and license a track online in a minute: from ${} for online videos, ${} for ads and commercial use."
 ],
 [
 "Podglądy mają delikatny, słyszalny znak wodny; licencjonowany plik jest czysty.",
@@ -1399,5 +1399,9 @@ export const PAIRS: Array<[string, string]> = [
 [
 "Administrator: Kamil Skomra (HardbanRecords Lab), kontakt w sprawach danych: legal@hardbanrecordslab.online.",
 "Controller: Kamil Skomra (HardbanRecords Lab), contact for data matters: legal@hardbanrecordslab.online."
+],
+[
+"Zapłać ${}",
+"Pay ${}"
 ]
 ];

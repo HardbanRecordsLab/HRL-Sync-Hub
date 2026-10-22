@@ -37,14 +37,14 @@ async function call(method, path, body) {
 }
 
 /** One-off Checkout session for a licence. Amount in cents (USD). */
-function createCheckoutSession({ orderId, title, description, amount, email, successUrl, cancelUrl }) {
+function createCheckoutSession({ orderId, title, description, amount, email, successUrl, cancelUrl, lang }) {
   return call("POST", "/checkout/sessions", {
     mode: "payment",
     customer_email: email,
     client_reference_id: orderId,
     success_url: successUrl,
     cancel_url: cancelUrl,
-    locale: "auto",
+    locale: lang === "pl" || lang === "en" ? lang : "auto",
     metadata: { order_id: orderId, app: "hrl-sync" },
     payment_intent_data: { metadata: { order_id: orderId, app: "hrl-sync" } },
     line_items: {

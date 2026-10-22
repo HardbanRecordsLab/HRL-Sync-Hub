@@ -67,6 +67,7 @@ router.post("/checkout", async (req, res) => {
   const company = str(b.buyer_company, 200) || null;
   const project = str(b.project_title, 300);
   const projectDesc = str(b.project_description, 1000) || null;
+  const lang = b.lang === "pl" ? "pl" : "en";
   if (!trackId || !name || !EMAIL_RE.test(email) || !project) {
     return res.status(400).json({ error: "Name, a valid e-mail and the project title are required." });
   }
@@ -84,10 +85,10 @@ router.post("/checkout", async (req, res) => {
 
   const { rows: [order] } = await query(
     `INSERT INTO license_orders (track_id, track_title, track_artist, tier_code, tier_name, price_grosze, buyer_name, buyer_email,
-       buyer_company, project_title, project_description, terms_version, waiver_accepted, ip_address)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,$13) RETURNING *`,
+       buyer_company, project_title, project_description, terms_version, waiver_accepted, ip_address, lang)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,$13,$14) RETURNING *`,
     [track.id, track.title, track.artist, tier.code, tier.name, tier.price_grosze, name, email, company, project, projectDesc,
-      TERMS_VERSION, (req.ip || "").slice(0, 64)]
+      TERMS_VERSION, (req.ip || "").slice(0, 64), lang]
   );
   try {
     const session = await stripe.createCheckoutSession({
@@ -96,6 +97,7 @@ router.post("/checkout", async (req, res) => {
       description: `Project: ${project}`.slice(0, 300),
       amount: tier.price_grosze,
       email,
+      lang,
       successUrl: `${FRONTEND()}/license/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${FRONTEND()}/public-library`,
     });
@@ -142,11 +144,21 @@ async function fulfil(orderId) {
   const links = publicOrder(order);
   try {
     const pdf = await buildCertificate(order, verifyUrl);
+    const pl = order.lang === "pl";
     await emailService.send({
       to: order.buyer_email,
       replyTo: NOTIFY(),
-      subject: `Your sync licence ${order.number} — ${order.track_title}`,
-      text:
+      subject: pl ? `Twoja licencja sync ${order.number} — ${order.track_title}` : `Your sync licence ${order.number} — ${order.track_title}`,
+      text: pl ?
+        `Cześć ${order.buyer_name},\n\ndziękujemy za licencję na utwór „${order.track_title}” (${order.track_artist}) do projektu „${order.project_title}”.\n\n` +
+        `Nr licencji: ${order.number}\nPakiet: ${order.tier_name} (${money(order.price_grosze)})\n\n` +
+        `Pobierz plik w pełnej jakości (link ważny ${DOWNLOAD_DAYS} dni):\n${links.download_url}\n` +
+        `Gotowe wersje skrócone — 30 s: ${links.edit_urls[30]}\n60 s: ${links.edit_urls[60]}\n\n` +
+        `Certyfikat licencji jest w załączniku (także tutaj: ${links.certificate_url}).\n` +
+        `Strona weryfikacji: ${verifyUrl}\nWarunki: ${TERMS_URL}\n\n` +
+        `Wyrażono zgodę na natychmiastowe dostarczenie treści cyfrowych i przyjęto do wiadomości utratę prawa odstąpienia od umowy (art. 38 pkt 13 ustawy o prawach konsumenta).\n\n` +
+        `Jeśli YouTube lub inna platforma zgłosi roszczenie do Twojego filmu, odpowiedz na ten e-mail, podając numer licencji.\n\n— HardbanRecords Lab · HRL Sync Hub`
+        :
         `Hi ${order.buyer_name},\n\nthank you for licensing "${order.track_title}" (${order.track_artist}) for "${order.project_title}".\n\n` +
         `Licence no.: ${order.number}\nTier: ${order.tier_name} (${money(order.price_grosze)})\n\n` +
         `Download the full-quality file (link valid ${DOWNLOAD_DAYS} days):\n${links.download_url}\n` +

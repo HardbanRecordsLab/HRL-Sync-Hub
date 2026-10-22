@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { getLang } from "@/lib/hrl/hrl-i18n";
 import { cn } from "@/lib/utils";
 
 type Tier = { code: string; name: string; summary: string; price: number | null; quote_only: boolean };
@@ -47,7 +48,7 @@ export function LicenseDialog({ track, onClose }: { track: TrackRef | null; onCl
         setBusy(false);
       } else {
         const r = await api.post<{ url: string }>("/api/licenses/checkout", {
-          track_id: track.id, tier, ...form, accept_terms: terms, accept_waiver: waiver,
+          track_id: track.id, tier, ...form, accept_terms: terms, accept_waiver: waiver, lang: getLang(),
         });
         window.location.href = r.url;
       }
